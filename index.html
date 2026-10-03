@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Air Guitar Hero</title>
+  <meta name="description" content="Play air guitar with your camera: a rock-star avatar copies your moves and your hands make real chords." />
+  <meta name="theme-color" content="#0b0820" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Air Guitar" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <video id="camera" class="hidden" playsinline muted autoplay></video>
+
+  <div id="hud" class="hidden">
+    <div id="chord">G</div>
+    <button id="gear" aria-label="Settings">⚙︎</button>
+    <div id="strip"></div>
+  </div>
+
+  <div id="status" class="hidden"></div>
+
+  <div id="panel" class="hidden">
+    <h2>Settings</h2>
+    <label>Chords
+      <select id="preset"></select>
+    </label>
+    <label>Sound
+      <select id="tone">
+        <option value="acoustic">Acoustic</option>
+        <option value="rock">Rock (distortion)</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" id="lefty" /> Left-handed</label>
+    <label class="check"><input type="checkbox" id="showcam" /> Show camera preview</label>
+    <button id="close">Done</button>
+  </div>
+
+  <div id="intro">
+    <div class="card">
+      <div class="logo">🎸</div>
+      <h1>Air Guitar Hero</h1>
+      <p>Become a rock-star avatar. Your camera tracks your body and you play with your imagination.</p>
+      <ol>
+        <li>Prop your phone up and step back so your upper body is in view.</li>
+        <li><b>Slide your fretting hand</b> along the neck to change chords.</li>
+        <li><b>Strum</b> across the guitar body with your other hand.</li>
+      </ol>
+      <button id="play" class="primary">Start playing</button>
+      <button id="demo">Watch demo</button>
+      <p id="error"></p>
+      <p class="small">Video stays on your phone — nothing is uploaded. Turn your sound on 🔊</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
