@@ -10,6 +10,7 @@ import { TromboneInstrument } from './instruments/trombone.js';
 import { PianoInstrument } from './instruments/piano.js';
 import { SaxInstrument } from './instruments/sax.js';
 import { VERSION, BUILD } from './version.js';
+import { isNative, nativePlugin } from './native.js';
 import { Entitlements, PLAY_URL, TRIAL_DAYS } from './purchases.js';
 
 const $ = (id) => document.getElementById(id);
@@ -535,7 +536,7 @@ window.addEventListener('popstate', () => {
   if (!isOpen('intro')) history.pushState({ playing: true }, '');
 });
 // Android back button / gesture (app).
-const nativeApp = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.registerPlugin?.('App') : null;
+const nativeApp = nativePlugin('App');
 try {
   Promise.resolve(
     nativeApp?.addListener('backButton', () => {
@@ -681,9 +682,8 @@ store.init();
 
 // ---------- Play on TV (Android screen casting) ----------
 
-const isNative = !!window.Capacitor?.isNativePlatform?.();
-const tvCast = isNative ? window.Capacitor.registerPlugin?.('TvCast') : null;
-const orientation = isNative ? window.Capacitor.registerPlugin?.('ScreenOrientation') : null;
+const tvCast = nativePlugin('TvCast');
+const orientation = nativePlugin('ScreenOrientation');
 
 // TV mode: lock the app sideways so the mirrored picture fills the TV.
 async function setTvMode(on) {
@@ -731,7 +731,7 @@ const APK_URL = 'https://github.com/JPPotgieter/AirGuitar/releases/download/andr
 // The Android app checks GitHub for a newer test build and offers a one-tap update.
 async function checkForUpdate() {
   // Play Store builds must only update through Google Play.
-  if (BUILD.channel !== 'test' || !window.Capacitor?.isNativePlatform?.() || !VERSION.code) return;
+  if (BUILD.channel !== 'test' || !isNative || !VERSION.code) return;
   try {
     const res = await fetch(RELEASE_API, { cache: 'no-store' });
     if (!res.ok) return;
@@ -746,8 +746,9 @@ async function checkForUpdate() {
   }
 }
 $('update-go').addEventListener('click', () => {
-  // Opens in the phone's browser, which downloads the APK; tap it to install the update.
-  window.open(APK_URL, '_system');
+  // In the app, navigating to an outside link hands it to the phone's browser, which downloads
+  // the APK; tap it to install the update.
+  window.location.href = APK_URL;
   $('update').classList.add('hidden');
 });
 $('update-close').addEventListener('click', () => $('update').classList.add('hidden'));

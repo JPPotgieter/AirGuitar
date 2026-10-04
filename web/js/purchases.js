@@ -1,5 +1,6 @@
 // Free version: guitar. A monthly Google Play subscription unlocks every other instrument.
 import { BUILD } from './version.js';
+import { nativePlugin } from './native.js';
 
 // Play Console: Monetize -> Subscriptions. Product ID and base plan ID must match exactly.
 export const PRODUCT_ID = 'full_access';
@@ -18,9 +19,7 @@ const isPurchased = (t) => t && (t.purchaseState === undefined || String(t.purch
 const isPending = (t) => t && String(t.purchaseState) === '2';
 
 function billingPlugin() {
-  const cap = window.Capacitor;
-  if (!cap?.isNativePlatform?.()) return null;
-  return cap.registerPlugin?.('NativePurchases') ?? cap.Plugins?.NativePurchases ?? null;
+  return nativePlugin('NativePurchases');
 }
 
 export class Entitlements {
