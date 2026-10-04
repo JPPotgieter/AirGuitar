@@ -17,6 +17,7 @@ const renderer = new Renderer($('stage'));
 const video = $('camera');
 
 let tracker = null;
+let camTracker = null; // kept between sessions so the body tracker only loads once
 let previewTracker = null; // demo performer shown while customising from the start screen
 let customFromIntro = false;
 const smoother = new LandmarkSmoother();
@@ -140,6 +141,7 @@ function updateView(b, dt) {
 function setLabel(text, index, pulse) {
   const el = $('chord');
   el.textContent = text;
+  el.style.fontSize = text.length > 5 ? '38px' : ''; // keep long names like "Floor tom" clear of the buttons
   if (pulse) {
     el.classList.remove('pulse');
     void el.offsetWidth;
@@ -257,9 +259,9 @@ async function start(demo) {
       tracker = new DemoTracker();
       tracker.mode = settings.instrument;
     } else {
-      const t = new PoseTracker(video);
-      await t.init(status);
-      tracker = t;
+      camTracker ||= new PoseTracker(video);
+      await camTracker.init(status);
+      tracker = camTracker;
     }
     previewTracker = null;
     instrument.reset();
@@ -276,6 +278,41 @@ async function start(demo) {
   }
   $('hud').classList.remove('hidden');
   applySettings();
+  // A history entry for the session, so the browser's back button returns to the menu.
+  if (!history.state?.playing) history.pushState({ playing: true }, '');
+}
+
+// ---------- Back to the menu ----------
+
+const isOpen = (id) => !$(id).classList.contains('hidden');
+
+function goToMenu() {
+  if (tracker instanceof PoseTracker) tracker.stop(); // camera off
+  tracker = null;
+  previewTracker = null;
+  body = null;
+  view = null;
+  smoother.reset();
+  instrument.reset();
+  instrument.lost?.();
+  audio.muteAll();
+  instrument.voice?.release(audio.ctx ? audio.ctx.currentTime : 0);
+  for (const id of ['hud', 'panel', 'custom', 'paywall']) $(id).classList.add('hidden');
+  status('');
+  // Coming back from a demo of a locked instrument: return to the free one.
+  if (store.isLocked(settings.instrument)) setInstrument('guitar');
+  applySettings();
+  $('intro').classList.remove('hidden');
+}
+
+// One step back: close whatever is on top, else leave the session. Returns false on the menu.
+function handleBack() {
+  if (isOpen('paywall')) closePaywall();
+  else if (isOpen('panel')) $('panel').classList.add('hidden');
+  else if (isOpen('custom')) closeCustomizer();
+  else if (!isOpen('intro')) goToMenu();
+  else return false;
+  return true;
 }
 
 // ---------- Customise avatar & guitar ----------
@@ -432,6 +469,21 @@ $('showcam').addEventListener('change', (e) => {
   applySettings();
 });
 $('gear').addEventListener('click', () => $('panel').classList.toggle('hidden'));
+$('home').addEventListener('click', () => {
+  goToMenu();
+  if (history.state?.playing) history.back();
+});
+// Browser back button (website).
+window.addEventListener('popstate', () => {
+  handleBack();
+  // Still in a session (we only closed a popup): keep a history entry for the next back press.
+  if (!isOpen('intro')) history.pushState({ playing: true }, '');
+});
+// Android back button / gesture (app).
+const nativeApp = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.registerPlugin?.('App') : null;
+nativeApp?.addListener('backButton', () => {
+  if (!handleBack()) nativeApp.exitApp();
+});
 $('close').addEventListener('click', () => $('panel').classList.add('hidden'));
 $('play').addEventListener('click', () => start(false));
 $('demo').addEventListener('click', () => start(true));

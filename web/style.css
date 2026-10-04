@@ -43,6 +43,7 @@ html, body {
   100% { transform: translateX(-50%) scale(1); }
 }
 
+#home,
 #gear {
   position: fixed;
   top: calc(env(safe-area-inset-top) + 12px);
@@ -317,3 +318,5 @@ button {
 #paywall .small { font-size: 13px; color: #aaa; }
 #paywall-msg:empty { display: none; }
 #paywall-terms:empty { display: none; }
+#gear { left: 64px; }
+#home { font-size: 34px; line-height: 40px; padding: 0 0 4px; }

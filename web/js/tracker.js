@@ -23,7 +23,13 @@ export class PoseTracker {
     this.lastTime = -1;
   }
 
+  // Loads the tracker the first time, then (re)starts the camera. Safe to call again after stop().
   async init(onStatus) {
+    if (!this.landmarker) await this.loadModel(onStatus);
+    await this.startCamera(onStatus);
+  }
+
+  async loadModel(onStatus) {
     onStatus('Loading body tracker…');
     const { lib, wasm, model } = await loadVision();
     const { PoseLandmarker, FilesetResolver } = lib;
@@ -42,7 +48,9 @@ export class PoseTracker {
       console.warn('GPU delegate unavailable, falling back to CPU', e);
       this.landmarker = await PoseLandmarker.createFromOptions(fileset, opts('CPU'));
     }
+  }
 
+  async startCamera(onStatus) {
     onStatus('Starting camera…');
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -50,6 +58,14 @@ export class PoseTracker {
     });
     this.video.srcObject = stream;
     await this.video.play();
+  }
+
+  // Turn the camera off (e.g. when going back to the menu).
+  stop() {
+    const stream = this.video.srcObject;
+    if (stream) for (const t of stream.getTracks()) t.stop();
+    this.video.srcObject = null;
+    this.lastTime = -1;
   }
 
   get aspect() {
