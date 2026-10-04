@@ -13,20 +13,25 @@ const PADS = [
   { id: 'ride', name: 'Ride', short: 'Ride', x: 1.55, y: 0.25, r: 0.6, kind: 'cymbal' },
 ];
 
-// A hit is a fast downward swing that suddenly stops, like a stick bouncing off a drum.
-class HitDetector {
-  constructor(armSpeed, fireSpeed) {
+// A hit is a downward swing that travels far enough, then suddenly slows or bounces back, like
+// a stick hitting a drum. "Slows" is measured relative to the swing's own peak speed, so it
+// works the same whether the camera delivers 15 or 60 frames a second.
+export class HitDetector {
+  // armSpeed: shoulder-widths/s a swing must reach. minTravel: shoulder-widths it must fall.
+  constructor(armSpeed = 2, minTravel = 0.15) {
     this.armSpeed = armSpeed;
-    this.fireSpeed = fireSpeed;
+    this.minTravel = minTravel;
     this.reset();
   }
   reset() {
     this.y = null;
     this.t = 0;
     this.peak = 0;
-    this.last = 0;
+    this.armedT = 0;
+    this.last = -1;
+    this.recent = []; // [t, y] over the last half second, to find the top of the swing
   }
-  // y in shoulder-widths, t in seconds. Returns hit strength (speed) or 0.
+  // y in shoulder-widths (down is positive), t in seconds. Returns hit strength (peak speed) or 0.
   push(y, t) {
     if (!Number.isFinite(y)) return 0;
     // Samples closer than ~1/90 s apart are too close to measure speed reliably.
@@ -35,13 +40,36 @@ class HitDetector {
     const dt = t - this.t;
     this.y = y;
     this.t = t;
-    if (prev === null) return 0;
+    this.recent.push([t, y]);
+    while (this.recent.length && t - this.recent[0][0] > 0.5) this.recent.shift();
+    if (prev === null || dt > 0.25) {
+      this.peak = 0; // first sample, or a long gap: start fresh
+      return 0;
+    }
     const vy = (y - prev) / dt;
-    if (vy > this.armSpeed) this.peak = Math.max(this.peak, vy);
-    if (this.peak && vy < this.fireSpeed) {
+    if (vy > this.armSpeed && !this.peak) this.armedT = t;
+    if (vy > this.armSpeed || (this.peak && vy > 0)) this.peak = Math.max(this.peak, vy);
+    if (!this.peak) return 0;
+    // A swing that drifts down slowly for too long isn't a hit.
+    if (t - this.armedT > 0.5) {
+      this.peak = 0;
+      return 0;
+    }
+    if (vy < this.peak * 0.35) {
+      // How far the hand fell from the top of this swing.
+      let top = y;
+      for (const [, ry] of this.recent) top = Math.min(top, ry);
+      const fell = prev - top;
+      if (fell < this.minTravel) {
+        // Too short to be a hit yet. A jittery frame mid-swing is ignored; only a clear move
+        // back up abandons the swing.
+        if (vy < -this.armSpeed * 0.5) this.peak = 0;
+        return 0;
+      }
       const peak = this.peak;
       this.peak = 0;
-      if (t - this.last < 0.07) return 0;
+      this.recent = [[t, y]]; // the next swing starts from here
+      if (t - this.last < 0.12) return 0;
       this.last = t;
       return peak;
     }
@@ -49,12 +77,24 @@ class HitDetector {
   }
 }
 
+// Drum sensitivity setting: how fast and how far a swing must go to count.
+export const SENSITIVITY = {
+  low: { armSpeed: 3, minTravel: 0.25 },
+  normal: { armSpeed: 2, minTravel: 0.15 },
+  high: { armSpeed: 1.4, minTravel: 0.09 },
+};
+export const makeHandDetector = (level = 'normal') => {
+  const s = SENSITIVITY[level] || SENSITIVITY.normal;
+  return new HitDetector(s.armSpeed, s.minTravel);
+};
+
 export class DrumsInstrument {
   constructor(app) {
     this.app = app;
     this.id = 'drums';
-    this.hands = { L: new HitDetector(3, 0.8), R: new HitDetector(3, 0.8) };
-    this.knees = { L: new HitDetector(1.4, 0.3), R: new HitDetector(1.4, 0.3) };
+    const level = app.settings.drumSensitivity;
+    this.hands = { L: makeHandDetector(level), R: makeHandDetector(level) };
+    this.knees = { L: new HitDetector(1.2, 0.12), R: new HitDetector(1.2, 0.12) };
     this.flash = {};
     this.lastHit = -1;
     this.pads = null;
@@ -62,6 +102,10 @@ export class DrumsInstrument {
 
   reset() {
     for (const d of [...Object.values(this.hands), ...Object.values(this.knees)]) d.reset();
+  }
+
+  setSensitivity(level) {
+    this.hands = { L: makeHandDetector(level), R: makeHandDetector(level) };
   }
 
   lost() {

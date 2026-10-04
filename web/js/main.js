@@ -26,9 +26,12 @@ let body = null;
 let mouth = 0;
 // Hands only count once they've been clearly visible for a moment (no playing on guesses).
 const HAND_STEADY_MS = 200;
+// Fast moves (like a drum hit) blur the hand and the tracker briefly loses confidence; keep the
+// hand active through short dropouts so those hits still count.
+const HAND_GRACE_MS = 300;
 const hands = {
-  L: { since: null, active: false, weight: 0 },
-  R: { since: null, active: false, weight: 0 },
+  L: { since: null, lostAt: null, active: false, weight: 0 },
+  R: { since: null, lostAt: null, active: false, weight: 0 },
 };
 let handsMissingSince = null;
 let view = null; // auto-zoom so the avatar + instrument always fit on screen
@@ -77,7 +80,7 @@ const HOW = {
 };
 
 function loadSettings() {
-  const d = { instrument: 'guitar', preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
+  const d = { instrument: 'guitar', drumSensitivity: 'normal', preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
   let saved = {};
   try {
     saved = JSON.parse(localStorage.getItem('airguitar') || '{}');
@@ -176,6 +179,8 @@ function applySettings() {
   $('lefty').checked = settings.lefty;
   $('showcam').checked = settings.showCam;
   $('instrument').value = settings.instrument;
+  $('drum-sens').value = settings.drumSensitivity;
+  for (const el of document.querySelectorAll('.drums-only')) el.classList.toggle('hidden', settings.instrument !== 'drums');
   for (const el of document.querySelectorAll('.guitar-only')) el.classList.toggle('hidden', settings.instrument !== 'guitar');
   for (const b of document.querySelectorAll('#pick-instrument button')) {
     b.classList.toggle('on', b.dataset.id === settings.instrument);
@@ -223,9 +228,19 @@ function loop(now) {
       const W = renderer.w, H = renderer.h;
       for (const side of ['L', 'R']) {
         const h = hands[side];
-        if (handVisible(raw, side)) h.since ??= now;
-        else h.since = null;
-        h.active = h.since !== null && now - h.since >= HAND_STEADY_MS;
+        if (handVisible(raw, side)) {
+          h.since ??= now;
+          h.lostAt = null;
+          if (now - h.since >= HAND_STEADY_MS) h.active = true;
+        } else {
+          h.lostAt ??= now;
+          if (now - h.lostAt > HAND_GRACE_MS) {
+            h.active = false;
+            h.since = null;
+          } else if (!h.active) {
+            h.since = null; // not established yet: a dropout restarts the wait
+          }
+        }
         // Fade the avatar's arm between resting and tracked.
         h.weight += ((h.active ? 1 : 0) - h.weight) * Math.min(1, dt * 8);
       }
@@ -469,6 +484,11 @@ for (const [id, ins] of Object.entries(INSTRUMENTS)) {
   $('pick-instrument').appendChild(b);
 }
 $('instrument').addEventListener('change', (e) => setInstrument(e.target.value));
+$('drum-sens').addEventListener('change', (e) => {
+  settings.drumSensitivity = e.target.value;
+  if (instrument.id === 'drums') instrument.setSensitivity(e.target.value);
+  applySettings();
+});
 $('preset').addEventListener('change', (e) => {
   settings.preset = e.target.value;
   settings.tone = PRESETS[settings.preset].tone;

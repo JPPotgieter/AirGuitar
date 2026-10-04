@@ -54,7 +54,7 @@ export class PoseTracker {
     onStatus('Starting camera…');
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } },
     });
     this.video.srcObject = stream;
     await this.video.play();
