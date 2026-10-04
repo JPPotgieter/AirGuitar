@@ -64,17 +64,21 @@ and a signed `AirGuitarHero.apk`, both on the **android-latest** release.
 > Air Guitar Hero
 
 **Short description** (80 characters max):
-> Play air guitar with your camera. Your avatar rocks out and you make real music!
+> Play air guitar, drums & trombone with your camera. Make real music by moving!
 
 **Full description:**
-> Grab your imaginary guitar and become a rock star!
+> Grab your imaginary guitar, drumsticks or trombone and become a rock star!
 >
 > Air Guitar Hero uses your phone's camera to follow your body. A cartoon rock star copies
 > every move you make, and the guitar in your hands makes real music.
 >
+> 🎸 AIR GUITAR, 🥁 AIR DRUMS AND 🎺 AIR TROMBONE: three instruments, all played with your body.
+>
 > 🎸 SLIDE TO CHANGE CHORDS: move your fretting hand up and down the neck to switch chords.
 > 🎶 STRUM TO PLAY: sweep your other hand across the guitar. Strum harder to play louder,
 > and strum up or down for a different sound.
+> 🥁 DRUM ALONG: hit anywhere around you to play snare, toms, hi-hat and cymbals. Stomp for the kick.
+> 🎺 SLIDE THE TROMBONE: push the slide out and in to play notes that glide like the real thing.
 > 🎨 CREATE YOUR ROCK STAR: pick your skin, hair, shades, hat and outfit.
 > 🤘 CHOOSE YOUR GUITAR: Acoustic, Classic Red, Gold Top, Flying V or Neon Star, each with
 > its own look and sound.

@@ -33,9 +33,8 @@ export class Renderer {
     this.h = h;
   }
 
-  onStrum(direction, velocity, at, color) {
+  onNote(velocity, at, color) {
     this.flash = Math.min(1, this.flash + 0.4 + velocity * 0.6);
-    for (let s = 0; s < 6; s++) this.stringEnergy[s] = 0.6 + velocity * 0.6;
     const n = 2 + Math.round(velocity * 4);
     for (let i = 0; i < n; i++) {
       this.particles.push({
@@ -166,20 +165,10 @@ export class Renderer {
 
     this.drawHead(b.head, S, scene.mouth);
 
-    // Guitar strap from strum-side shoulder to the neck joint.
-    const g = scene.guitar;
-    const strapEnd = g.at(GEO.neckStart, -0.15);
-    const strapStart = g.at(GEO.bridge - 0.05, 0);
-    ctx.strokeStyle = scene.guitarStyle.strap;
-    ctx.lineWidth = S * 0.09;
-    ctx.beginPath();
-    ctx.moveTo(strapStart.x, strapStart.y);
-    ctx.quadraticCurveTo(b.shoulder[g.fretSide].x, b.shoulder[g.fretSide].y - S * 0.1, strapEnd.x, strapEnd.y);
-    ctx.stroke();
+    // The instrument sits in front of the body; arms and hands go over it.
+    scene.instrument?.draw(this, scene);
 
-    this.drawGuitar(scene);
-
-    // Arms go over the guitar so hands sit on the strings.
+    // Arms go over the instrument so hands sit on the strings / sticks / slide.
     for (const side of ['L', 'R']) {
       limb(ctx, [b.shoulder[side], b.elbow[side]], S * 0.27, look.shirt);
       limb(ctx, [b.elbow[side], b.wrist[side]], S * 0.2, look.skin);
@@ -192,15 +181,7 @@ export class Renderer {
       ctx.fill();
       ctx.stroke();
     }
-    // Pick in the strumming hand.
-    const sh2 = b.hand[g.strumSide];
-    ctx.fillStyle = look.accent;
-    ctx.beginPath();
-    ctx.moveTo(sh2.x, sh2.y + S * 0.16);
-    ctx.lineTo(sh2.x - S * 0.06, sh2.y + S * 0.04);
-    ctx.lineTo(sh2.x + S * 0.06, sh2.y + S * 0.04);
-    ctx.closePath();
-    ctx.fill();
+    scene.instrument?.drawOver?.(this, scene);
   }
 
   drawHead(head, S, mouth) {

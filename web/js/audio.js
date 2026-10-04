@@ -52,7 +52,7 @@ export class GuitarAudio {
     post.gain.value = 0.35;
     this.input.connect(drive).connect(shaper).connect(cab).connect(mid).connect(post).connect(this.rock);
 
-    const mix = ctx.createGain();
+    const mix = (this.mix = ctx.createGain()); // shared bus for every instrument
     this.acoustic.connect(mix);
     this.rock.connect(mix);
 

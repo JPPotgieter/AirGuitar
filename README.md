@@ -1,13 +1,31 @@
 # 🎸 Air Guitar Hero
 
-Play air guitar on your phone. The front camera tracks your body, a rock-star avatar copies
-every move you make, and your imaginary guitar makes real music:
+Play air guitar, air drums or air trombone on your phone. The front camera tracks your body, a
+rock-star avatar copies every move you make, and your imaginary instrument makes real music.
+
+### 🎸 Guitar
 
 - **Fretting hand:** slide it along the neck to change chords. The neck follows your hand, and
   each section of the neck is labelled with its chord.
 - **Strumming hand:** sweep it across the guitar body. Down-strums and up-strums sound
   different, and harder strums play louder.
 - **Tap the screen** to strum too, which is handy for checking your sound is on.
+
+### 🥁 Drums
+
+- **Hit downwards** with either hand. The drum or cymbal nearest to where your hand stops is
+  played: snare, two toms, floor tom, hi-hat, crash and ride. Harder hits are louder.
+- **Lift and stomp a knee** for the kick drum, or hit low in the middle.
+
+### 🎺 Trombone
+
+- Hold the trombone to your mouth with one hand and **push or pull the slide** with the other.
+- **Slide in for high notes, out for low notes.** Each push or pull plays the note where your
+  hand stops (B♭ major pentatonic, so everything sounds good together), gliding from the last
+  note like a real trombone.
+
+### Everything else
+
 - **Create your rock star:** choose skin, hair style and colour, glasses, hat and outfit, then
   pick from five guitars (Acoustic, Classic Red, Gold Top, Flying V, Neon Star). Each guitar has
   its own shape and sound.
@@ -50,6 +68,7 @@ The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
   - **Sound:** Acoustic or Rock (distortion).
   - **Left-handed:** swap which hand strums and which hand frets.
   - **Show camera preview:** show or hide the small camera window.
+- Pick your instrument on the start screen or in ⚙︎ Settings.
 - **Watch demo** shows the avatar playing on its own. You can also open the app with `?demo`
   on the end of the URL.
 
@@ -58,7 +77,12 @@ The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
 | Piece | File |
 | --- | --- |
 | Body tracking with [MediaPipe Pose Landmarker](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) (33 body points, runs on-device) | `web/js/tracker.js` |
-| Mapping the pose to the avatar, guitar placement, chord zones and strum detection | `web/js/main.js` |
+| Pose landmarks to an on-screen skeleton | `web/js/body.js` |
+| App flow, settings, auto-zoom and the customise screen | `web/js/main.js` |
+| Guitar: placement, chord zones and strum detection | `web/js/instruments/guitar.js` |
+| Drums: kit layout and hit detection | `web/js/instruments/drums.js` |
+| Trombone: slide position and stroke detection | `web/js/instruments/trombone.js` |
+| Drum and trombone sound synthesis | `web/js/sounds.js` |
 | Drawing the stage, avatar, guitar and music notes on a canvas | `web/js/render.js` |
 | Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `web/js/audio.js` |
 | Chord shapes and chord sets | `web/js/chords.js` |

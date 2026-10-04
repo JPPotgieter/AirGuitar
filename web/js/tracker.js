@@ -66,24 +66,40 @@ export class PoseTracker {
   }
 }
 
-// A fake performer used for the demo mode (and for testing without a camera).
-// Coordinates are in the same mirrored-camera space MediaPipe would give us.
+// A fake performer used for the demo mode (and for testing without a camera). Coordinates
+// are raw camera space, as MediaPipe gives them: the person's right side is on the image's left.
+// `mode` picks which instrument the performer plays.
+const SHOULDER_X = 0.24; // shoulder width in raw x units
+const SHOULDER_Y = 0.18; // the same distance in raw y units (3:4 camera)
+// Body-relative position (shoulder widths; +x = performer's right, +y = down) to raw coords.
+const rx = (px) => 0.5 - px * SHOULDER_X;
+const ry = (py) => 0.33 + py * SHOULDER_Y;
+const smoothstep = (f) => f * f * (3 - 2 * f);
+const frac = (x) => x - Math.floor(x);
+
+const DRUM_PADS = {
+  snare: [-0.72, 1.45], tom1: [-0.38, 0.88], tom2: [0.38, 0.88], floor: [1.18, 1.5], crash: [-1.5, -0.2], hihat: [-1.42, 0.8],
+};
+const DRUM_PATTERN = ['snare', 'tom2', 'snare', 'floor', 'snare', 'tom1', 'snare', 'crash'];
+const TROMBONE_TUNE = [3, 2, 1, 0, 1, 2, 4, 3, 5, 7, 6, 4];
+
 export class DemoTracker {
   constructor() {
     this.t0 = performance.now();
     this.video = null;
+    this.mode = 'guitar';
   }
   async init() {}
   get aspect() {
     return 3 / 4;
   }
   detect(now) {
-    const t = (now - this.t0) / 1000;
+    // requestAnimationFrame's timestamp can be slightly older than our start time.
+    const t = Math.max(0, (now - this.t0) / 1000);
     const pts = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0, visibility: 1 }));
     const set = (i, x, y) => (pts[i] = { x, y, z: 0, visibility: 1 });
     const bob = Math.sin(t * Math.PI * 2) * 0.008; // nod along to the beat
     const sway = Math.sin(t * 0.7) * 0.02;
-    // Raw camera space: the person's right side is on the image's left.
     set(0, 0.5 + sway, 0.2 + bob);
     set(2, 0.52 + sway, 0.185 + bob); // left eye
     set(5, 0.48 + sway, 0.185 + bob); // right eye
@@ -97,21 +113,57 @@ export class DemoTracker {
     set(26, 0.4, 0.78);
     set(27, 0.61, 0.95);
     set(28, 0.39, 0.95);
-    // Fretting (left) hand slides along the neck every two bars.
-    const zone = Math.floor(t / 2) % 4;
-    const reach = 0.24 + zone * 0.04;
-    set(13, 0.7, 0.45);
-    set(15, 0.5 + reach * 0.95, 0.5 - reach * 0.35);
-    set(17, pts[15].x + 0.02, pts[15].y - 0.01);
-    set(19, pts[15].x + 0.03, pts[15].y);
-    set(21, pts[15].x + 0.01, pts[15].y - 0.02);
-    // Strumming (right) hand: down-up on the beat.
-    const strum = Math.sin(t * Math.PI * 4);
-    set(14, 0.33, 0.45);
-    set(16, 0.42 - strum * 0.01, 0.53 + strum * 0.07);
-    set(18, pts[16].x - 0.02, pts[16].y + 0.01);
-    set(20, pts[16].x - 0.03, pts[16].y);
-    set(22, pts[16].x - 0.01, pts[16].y - 0.02);
+    const hand = (side, x, y) => {
+      const [w, el, sh, pinky, index, thumb] = side === 'L' ? [15, 13, 11, 17, 19, 21] : [16, 14, 12, 18, 20, 22];
+      const out = side === 'L' ? 1 : -1;
+      set(w, x, y);
+      // Elbow halfway between shoulder and hand, bent outwards and down.
+      set(el, (pts[sh].x + x) / 2 + out * 0.05, (pts[sh].y + y) / 2 + 0.06);
+      set(pinky, x + out * 0.02, y - 0.01);
+      set(index, x + out * 0.03, y);
+      set(thumb, x + out * 0.01, y - 0.02);
+    };
+
+    if (this.mode === 'drums') {
+      // Left hand: hi-hat eighth notes. Right hand: around the kit on the beat.
+      const hf = frac(t / 0.25);
+      const hh = DRUM_PADS.hihat;
+      hand('L', rx(hh[0]), ry(hh[1] - 0.55 * Math.pow(Math.sin(Math.PI * hf), 0.8)));
+      const k = Math.floor(t / 0.5);
+      const f = frac(t / 0.5);
+      const a = DRUM_PADS[DRUM_PATTERN[k % DRUM_PATTERN.length]];
+      const b = DRUM_PADS[DRUM_PATTERN[(k + 1) % DRUM_PATTERN.length]];
+      const x = a[0] + (b[0] - a[0]) * smoothstep(f);
+      // Swing up and come down onto the next target (higher swings for cymbals above).
+      const lift = 0.8 + 1.4 * Math.max(0, a[1] - b[1]);
+      const y = a[1] + (b[1] - a[1]) * f - lift * Math.pow(Math.sin(Math.PI * f), 0.8);
+      hand('R', rx(x), ry(y));
+      // Kick drum: stomp the right knee on beats 1 and 3.
+      const kf = frac(t / 1.0);
+      const kneeLift = 0.08 * Math.pow(Math.sin(Math.PI * Math.min(1, kf / 0.5)), 0.8);
+      set(26, 0.4, 0.78 - kneeLift);
+      set(28, 0.39, 0.95 - kneeLift);
+    } else if (this.mode === 'trombone') {
+      const mouth = { x: 0.5 + sway, y: 0.23 + bob };
+      const step = Math.floor(t / 0.5);
+      const f = Math.min(1, frac(t / 0.5) / 0.35);
+      const ext = (z) => 0.8 + (z + 0.5) * (1.6 / 8); // centre of each slide zone, as measured from the mouth
+      const e0 = ext(TROMBONE_TUNE[step % TROMBONE_TUNE.length]);
+      const e1 = ext(TROMBONE_TUNE[(step + 1) % TROMBONE_TUNE.length]);
+      const e = e0 + (e1 - e0) * smoothstep(f);
+      hand('R', mouth.x - e * SHOULDER_X, mouth.y + 0.04);
+      hand('L', mouth.x - 0.35 * SHOULDER_X, mouth.y + 0.35 * SHOULDER_Y);
+    } else {
+      // Guitar. Fretting (left) hand slides along the neck every two bars.
+      const zone = Math.floor(t / 2) % 4;
+      const reach = 0.24 + zone * 0.04;
+      hand('L', 0.5 + reach * 0.95, 0.5 - reach * 0.35);
+      set(13, 0.7, 0.45);
+      // Strumming (right) hand: down-up on the beat.
+      const strum = Math.sin(t * Math.PI * 4);
+      hand('R', 0.42 - strum * 0.01, 0.53 + strum * 0.07);
+      set(14, 0.33, 0.45);
+    }
     return pts;
   }
 }

@@ -29,10 +29,13 @@
 
   <div id="panel" class="hidden">
     <h2>Settings</h2>
-    <label>Chords
+    <label>Instrument
+      <select id="instrument"></select>
+    </label>
+    <label class="guitar-only">Chords
       <select id="preset"></select>
     </label>
-    <label>Sound
+    <label class="guitar-only">Sound
       <select id="tone">
         <option value="acoustic">Acoustic</option>
         <option value="rock">Rock (distortion)</option>
@@ -61,11 +64,8 @@
       <div class="logo">🎸</div>
       <h1>Air Guitar Hero</h1>
       <p>Become a rock-star avatar. Your camera tracks your body and you play with your imagination.</p>
-      <ol>
-        <li>Prop your phone up and step back so your upper body is in view.</li>
-        <li><b>Slide your fretting hand</b> along the neck to change chords.</li>
-        <li><b>Strum</b> across the guitar body with your other hand.</li>
-      </ol>
+      <div id="pick-instrument" aria-label="Choose your instrument"></div>
+      <ol id="how"></ol>
       <button id="play" class="primary">Start playing</button>
       <button id="customize">🎨 Create your rock star</button>
       <button id="demo">Watch demo</button>
