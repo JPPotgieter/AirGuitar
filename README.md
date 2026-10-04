@@ -13,15 +13,27 @@ Everything runs in the browser on your phone. The video is never uploaded.
 
 ## Get it on your phone
 
-The camera only works over HTTPS, so host the app on GitHub Pages (free):
+### Android app (APK)
+
+Every push to GitHub builds the Android app automatically.
+
+1. On your Android phone, open
+   **https://github.com/JPPotgieter/AirGuitar/releases/tag/android-latest**
+2. Tap **AirGuitarHero.apk** to download it, then open it.
+3. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.
+4. Open **Air Guitar Hero** and allow camera access.
+
+Publishing to Google Play is covered step by step in [`store/PLAY_STORE.md`](store/PLAY_STORE.md).
+
+### Website (any phone, including iPhone)
+
+The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
 
 1. In this repo on GitHub, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
-2. Push to `main` (or re-run the *Deploy to GitHub Pages* workflow). The site is published at
-   `https://<your-username>.github.io/AirGuitar/`.
-3. Open that link on your phone and allow camera access.
-4. Install it like an app:
-   - **iPhone (Safari):** Share → *Add to Home Screen*
-   - **Android (Chrome):** ⋮ menu → *Install app* / *Add to Home screen*
+2. Push, or re-run the *Deploy to GitHub Pages* workflow. The site is published at
+   `https://jppotgieter.github.io/AirGuitar/`.
+3. Open that link on your phone and allow camera access. You can add it to your home screen
+   (iPhone: Share → *Add to Home Screen*; Android: ⋮ → *Install app*).
 
 ## Tips for playing
 
@@ -41,12 +53,15 @@ The camera only works over HTTPS, so host the app on GitHub Pages (free):
 
 | Piece | File |
 | --- | --- |
-| Body tracking with [MediaPipe Pose Landmarker](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) (33 body points, runs on-device) | `js/tracker.js` |
-| Mapping the pose to the avatar, guitar placement, chord zones and strum detection | `js/main.js` |
-| Drawing the stage, avatar, guitar and music notes on a canvas | `js/render.js` |
-| Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `js/audio.js` |
-| Chord shapes and chord sets | `js/chords.js` |
-| Offline caching / installable app | `sw.js`, `manifest.webmanifest` |
+| Body tracking with [MediaPipe Pose Landmarker](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) (33 body points, runs on-device) | `web/js/tracker.js` |
+| Mapping the pose to the avatar, guitar placement, chord zones and strum detection | `web/js/main.js` |
+| Drawing the stage, avatar, guitar and music notes on a canvas | `web/js/render.js` |
+| Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `web/js/audio.js` |
+| Chord shapes and chord sets | `web/js/chords.js` |
+| Build step: copies `web/` to `www/` and bundles the MediaPipe runtime and model so the app works offline | `scripts/build-web.mjs` |
+| Android app ([Capacitor](https://capacitorjs.com) wrapper around `www/`) | `android/` |
+| CI: Android APK/AAB build, and GitHub Pages deploy | `.github/workflows/` |
+| Play Store graphics, listing text and checklist | `store/` |
 
 **Strum detection:** the strumming hand's position is measured across the strings (at right
 angles to the neck). A strum fires when the hand crosses the strings fast enough. The direction
@@ -56,13 +71,15 @@ of the crossing picks a down-strum or an up-strum, and the speed sets the volume
 chord. A little hysteresis stops the chord from flickering when your hand sits on a boundary.
 
 To add your own chords, add a shape to `SHAPES` and a chord set to `PRESETS` in
-`js/chords.js`.
+`web/js/chords.js`.
 
-## Run locally
+## Develop
 
 ```sh
-npx http-server .   # then open http://localhost:8080
+npm install
+npm run serve            # builds www/ and serves it at http://localhost:8080
+npm run android:sync     # rebuild www/ and copy it into the Android project
+npm run android:open     # open in Android Studio to run on a device or emulator
 ```
 
-`localhost` counts as a secure origin, so the camera works there on a computer. To test on a
-phone you need HTTPS, so use GitHub Pages.
+`localhost` counts as a secure origin, so the camera works there on a computer.

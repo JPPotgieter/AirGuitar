@@ -1,8 +1,20 @@
 // Body tracking via MediaPipe Pose Landmarker (33 landmarks, normalised 0..1 image coords).
-const MP_VERSION = '0.10.14';
-const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
-const MODEL_URL =
+// The build (scripts/build-web.mjs) bundles the runtime and model under vendor/; when running
+// the raw web/ folder they come from the CDN instead.
+const LOCAL = new URL('vendor/mediapipe/', document.baseURI).href;
+const CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const CDN_MODEL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
+async function loadVision() {
+  try {
+    const lib = await import(`${LOCAL}vision_bundle.mjs`);
+    return { lib, wasm: `${LOCAL}wasm`, model: `${LOCAL}pose_landmarker_lite.task` };
+  } catch {
+    const lib = await import(`${CDN}/vision_bundle.mjs`);
+    return { lib, wasm: `${CDN}/wasm`, model: CDN_MODEL };
+  }
+}
 
 export class PoseTracker {
   constructor(video) {
@@ -13,10 +25,11 @@ export class PoseTracker {
 
   async init(onStatus) {
     onStatus('Loading body tracker…');
-    const { PoseLandmarker, FilesetResolver } = await import(`${MP_URL}/vision_bundle.mjs`);
-    const fileset = await FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+    const { lib, wasm, model } = await loadVision();
+    const { PoseLandmarker, FilesetResolver } = lib;
+    const fileset = await FilesetResolver.forVisionTasks(wasm);
     const opts = (delegate) => ({
-      baseOptions: { modelAssetPath: MODEL_URL, delegate },
+      baseOptions: { modelAssetPath: model, delegate },
       runningMode: 'VIDEO',
       numPoses: 1,
       minPoseDetectionConfidence: 0.5,

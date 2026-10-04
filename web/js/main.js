@@ -393,7 +393,8 @@ renderer.resize();
 applySettings();
 requestAnimationFrame(loop);
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+// Service worker only for the website; the Android app already has its files on the device.
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 if (new URLSearchParams(location.search).has('demo')) start(true);

@@ -1,0 +1,8 @@
+{
+  "appId": "com.jppotgieter.airguitar",
+  "appName": "Air Guitar Hero",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0b0820"
+  }
+}
