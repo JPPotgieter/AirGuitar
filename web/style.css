@@ -227,9 +227,9 @@ button {
 .guitar-card small { font-weight: 400; color: #aaa; font-size: 12px; }
 .guitar-card.on { border-color: #ffd65a; background: rgba(255, 214, 90, 0.15); }
 
-#pick-instrument { display: flex; gap: 8px; margin: 14px 0 4px; }
+#pick-instrument { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
 #intro #pick-instrument button {
-  flex: 1;
+  flex: 1 1 28%;
   margin: 0;
   padding: 10px 4px;
   display: flex;
@@ -240,7 +240,7 @@ button {
   border: 2px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.08);
 }
-#pick-instrument button span { font-size: 30px; }
+#pick-instrument button span { font-size: 28px; }
 #intro #pick-instrument button.on { border-color: #ffd65a; background: rgba(255, 214, 90, 0.18); }
 #strip.small { gap: 4px; }
 #strip.small div { min-width: 0; padding: 6px 6px; font-size: 12px; }
@@ -349,3 +349,5 @@ button {
   #strip div { padding: 5px 8px; font-size: 13px; }
   #camera { width: 110px; }
 }
+#strip.tiny { gap: 2px; }
+#strip.tiny div { padding: 5px 4px; font-size: 11px; }

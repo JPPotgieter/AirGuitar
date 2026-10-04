@@ -13,7 +13,7 @@ checklist when you're ready to publish.
 | Increasing version code | Automatic: each build uses the workflow run number |
 | App icon, 512 × 512 | `store/icon-512.png` |
 | Feature graphic, 1024 × 500 | `store/feature-graphic.png` |
-| Phone screenshots, 1080 × 1920 | `store/screenshot-*.png` |
+| Phone screenshots, 1080 × 1920 | `store/screenshot-*.png` (Play allows up to 8, so leave out `screenshot-4-settings.png`) |
 | Privacy policy URL | `https://jppotgieter.github.io/AirGuitar/privacy.html` (once GitHub Pages is on) |
 | Works offline, no external servers | The body-tracking engine and model ship inside the app |
 
@@ -76,21 +76,23 @@ There are two builds of the app:
 > Air Guitar Hero
 
 **Short description** (80 characters max):
-> Play air guitar, drums & trombone with your camera. Make real music by moving!
+> Play air guitar, drums, piano, sax & more with your camera. Just move to play!
 
 **Full description:**
-> Grab your imaginary guitar, drumsticks or trombone and become a rock star!
+> Grab your imaginary guitar, drumsticks, piano, sax or trombone and become a star!
 >
 > Air Guitar Hero uses your phone's camera to follow your body. A cartoon rock star copies
 > every move you make, and the guitar in your hands makes real music.
 >
-> 🎸 AIR GUITAR, 🥁 AIR DRUMS AND 🎺 AIR TROMBONE: three instruments, all played with your body.
+> 🎸 GUITAR, 🥁 DRUMS, 🎹 PIANO, 🎷 SAX AND 🎺 TROMBONE: five instruments, all played with your body.
 >
 > 🎸 SLIDE TO CHANGE CHORDS: move your fretting hand up and down the neck to switch chords.
 > 🎶 STRUM TO PLAY: sweep your other hand across the guitar. Strum harder to play louder,
 > and strum up or down for a different sound.
 > 🥁 DRUM ALONG: hit anywhere around you to play snare, toms, hi-hat and cymbals. Stomp for the kick.
 > 🎺 SLIDE THE TROMBONE: push the slide out and in to play notes that glide like the real thing.
+> 🎹 PLAY THE PIANO: tap the keys in front of you with both hands, for melodies and chords.
+> 🎷 BLOW THE SAX: slide your hand along the sax for smooth bluesy solos.
 > 🎨 CREATE YOUR ROCK STAR: pick your skin, hair, shades, hat and outfit.
 > 🤘 CHOOSE YOUR GUITAR: Acoustic, Classic Red, Gold Top, Flying V or Neon Star, each with
 > its own look and sound.
@@ -133,8 +135,8 @@ There are two builds of the app:
 2. **Monetize → Subscriptions → Create subscription**
    - **Product ID:** `full_access` (must match exactly, and can't be changed later)
    - **Name:** Air Guitar Hero Full Access
-   - **Benefits** (shown by Google at checkout): "All instruments: drums, trombone and every new
-     instrument", "Guitar stays free"
+   - **Benefits** (shown by Google at checkout): "All instruments: drums, piano, sax, trombone
+     and every new instrument", "Guitar stays free"
 3. Inside it, **Add base plan**
    - **Base plan ID:** `monthly` (must match exactly)
    - **Type:** Auto-renewing, **Billing period:** 1 month

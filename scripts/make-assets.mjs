@@ -91,7 +91,7 @@ await page.waitForTimeout(2300);
 await page.screenshot({ path: `${store}/screenshot-3-rock.png` });
 await page.click('#gear');
 await page.screenshot({ path: `${store}/screenshot-4-settings.png` });
-for (const [n, inst] of [[6, 'drums'], [7, 'trombone']]) {
+for (const [n, inst] of [[6, 'drums'], [7, 'trombone'], [8, 'piano'], [9, 'sax']]) {
   await page.goto(`${url}?instrument=${inst}&demo`);
   await page.waitForTimeout(4200);
   await page.screenshot({ path: `${store}/screenshot-${n}-${inst}.png` });

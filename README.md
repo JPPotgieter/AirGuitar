@@ -1,6 +1,6 @@
 # 🎸 Air Guitar Hero
 
-Play air guitar, air drums or air trombone on your phone. The front camera tracks your body, a
+Play air guitar, drums, trombone, piano or saxophone on your phone. The front camera tracks your body, a
 rock-star avatar copies every move you make, and your imaginary instrument makes real music.
 
 ### 🎸 Guitar
@@ -23,6 +23,19 @@ rock-star avatar copies every move you make, and your imaginary instrument makes
 - **Slide in for high notes, out for low notes.** Each push or pull plays the note where your
   hand stops (B♭ major pentatonic, so everything sounds good together), gliding from the last
   note like a real trombone.
+
+### 🎹 Piano
+
+- A keyboard with two octaves of white keys (C3 to C5) appears at your waist: low notes on
+  your left, high notes on your right.
+- **Tap down** with either hand to press the key under it. Use both hands for bass and
+  melody, or chords.
+
+### 🎷 Saxophone
+
+- The sax hangs from your mouth down past your hip. **Slide your playing hand up and down
+  it.** Near your mouth is high, down by the bell is low (C blues scale, so it always sounds
+  bluesy). Each time your hand stops, that note plays, gliding from the last one.
 
 ### Free and full versions
 
@@ -105,7 +118,10 @@ The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
 | Guitar: placement, chord zones and strum detection | `web/js/instruments/guitar.js` |
 | Drums: kit layout and hit detection | `web/js/instruments/drums.js` |
 | Trombone: slide position and stroke detection | `web/js/instruments/trombone.js` |
-| Drum and trombone sound synthesis | `web/js/sounds.js` |
+| Piano: keyboard layout and key taps | `web/js/instruments/piano.js` |
+| Saxophone: hand position along the sax | `web/js/instruments/sax.js` |
+| Shared "move then stop" note trigger (trombone, sax) | `web/js/instruments/stroke.js` |
+| Drum, trombone, piano and saxophone sound synthesis | `web/js/sounds.js` |
 | Free/full version: Google Play subscription and free trial ([@capgo/native-purchases](https://github.com/Cap-go/capacitor-native-purchases), with a small fix in `patches/` so the trial offer is the one purchased) | `web/js/purchases.js` |
 | Drawing the stage, avatar, guitar and music notes on a canvas | `web/js/render.js` |
 | Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `web/js/audio.js` |

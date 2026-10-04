@@ -7,6 +7,8 @@ import { buildBody, LandmarkSmoother, handVisible } from './body.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
+import { PianoInstrument } from './instruments/piano.js';
+import { SaxInstrument } from './instruments/sax.js';
 import { VERSION, BUILD } from './version.js';
 import { Entitlements, PLAY_URL, TRIAL_DAYS } from './purchases.js';
 
@@ -53,6 +55,8 @@ const INSTRUMENTS = {
   guitar: { name: 'Guitar', emoji: '🎸', make: () => new GuitarInstrument(app) },
   drums: { name: 'Drums', emoji: '🥁', make: () => new DrumsInstrument(app) },
   trombone: { name: 'Trombone', emoji: '🎺', make: () => new TromboneInstrument(app) },
+  piano: { name: 'Piano', emoji: '🎹', make: () => new PianoInstrument(app) },
+  sax: { name: 'Sax', emoji: '🎷', make: () => new SaxInstrument(app) },
 };
 const store = new Entitlements(() => {
   // Purchase state changed (bought, restored, refunded): refresh locks everywhere.
@@ -77,6 +81,14 @@ const HOW = {
     'Hold the trombone to your mouth and <b>push or pull the slide</b> with your other hand.',
     'Slide <b>in for high notes</b>, <b>out for low notes</b>. Each push or pull plays a note.',
   ],
+  piano: [
+    'A keyboard appears at your waist: <b>low notes on your left</b>, high notes on your right.',
+    '<b>Tap down</b> with either hand to press the key under it. Use both hands for chords.',
+  ],
+  sax: [
+    'The sax hangs from your mouth down past your hip. <b>Slide your hand up and down it.</b>',
+    'Near your mouth plays <b>high notes</b>, down by the bell plays <b>low</b>. Each stop plays a note.',
+  ],
 };
 
 function loadSettings() {
@@ -88,7 +100,7 @@ function loadSettings() {
   const s = { ...d, ...saved };
   s.look = { ...DEFAULT_LOOK, ...(saved.look || {}) };
   if (!GUITARS[s.guitar]) s.guitar = d.guitar;
-  if (!['guitar', 'drums', 'trombone'].includes(s.instrument)) s.instrument = d.instrument;
+  if (!['guitar', 'drums', 'trombone', 'piano', 'sax'].includes(s.instrument)) s.instrument = d.instrument;
   return s;
 }
 function saveSettings() {
@@ -167,6 +179,7 @@ function buildStrip() {
   const strip = $('strip');
   strip.innerHTML = '';
   strip.classList.toggle('small', items.length > 6);
+  strip.classList.toggle('tiny', items.length > 10);
   for (const name of items) {
     const d = document.createElement('div');
     d.textContent = name;
@@ -523,9 +536,15 @@ window.addEventListener('popstate', () => {
 });
 // Android back button / gesture (app).
 const nativeApp = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.registerPlugin?.('App') : null;
-nativeApp?.addListener('backButton', () => {
-  if (!handleBack()) nativeApp.exitApp();
-});
+try {
+  Promise.resolve(
+    nativeApp?.addListener('backButton', () => {
+      if (!handleBack()) nativeApp.exitApp();
+    })
+  ).catch((e) => console.warn('Back button unavailable', e));
+} catch (e) {
+  console.warn('Back button unavailable', e); // never let this stop the app from starting
+}
 $('close').addEventListener('click', () => $('panel').classList.add('hidden'));
 $('play').addEventListener('click', () => start(false));
 $('demo').addEventListener('click', () => start(true));

@@ -1,4 +1,5 @@
 import { TromboneVoice } from '../sounds.js';
+import { StrokeDetector } from './stroke.js';
 
 // Slide positions from fully in (highest) to fully out (lowest): B♭ major pentatonic.
 const NOTES = [
@@ -23,11 +24,11 @@ export class TromboneInstrument {
   reset() {
     this.angle = null;
     this.geo = null;
-    this.stroke = { e: null, t: 0, peak: 0, dir: 0 };
+    this.stroke = new StrokeDetector();
   }
 
   lost() {
-    this.stroke.e = null;
+    this.stroke.reset();
   }
 
   stripItems() {
@@ -82,28 +83,8 @@ export class TromboneInstrument {
 
   // A stroke ends when the slide stops or changes direction; that's when the note sounds.
   detectStroke(e, t) {
-    const s = this.stroke;
-    if (!Number.isFinite(e) || (s.e !== null && t - s.t < 0.011)) return;
-    const prev = s.e;
-    const dt = t - s.t;
-    s.e = e;
-    s.t = t;
-    if (prev === null) return;
-    const v = (e - prev) / dt;
-    const speed = Math.abs(v);
-    if (speed > 1.2) {
-      if (s.dir && Math.sign(v) !== s.dir && s.peak) this.fire(s.peak);
-      s.dir = Math.sign(v);
-      s.peak = Math.max(s.peak, speed);
-    } else if (s.peak && speed < 0.45) {
-      this.fire(s.peak);
-      s.dir = 0;
-    }
-  }
-
-  fire(peak) {
-    this.stroke.peak = 0;
-    this.play(Math.min(1, 0.3 + peak / 6));
+    const peak = this.stroke.push(e, t);
+    if (peak) this.play(Math.min(1, 0.3 + peak / 6));
   }
 
   play(velocity) {

@@ -98,6 +98,10 @@ const DRUM_PADS = {
 };
 const DRUM_PATTERN = ['snare', 'tom2', 'snare', 'floor', 'snare', 'tom1', 'snare', 'crash'];
 const TROMBONE_TUNE = [3, 2, 1, 0, 1, 2, 4, 3, 5, 7, 6, 4];
+// Piano: white-key indexes (0 = C3). Left hand plays bass notes, right hand a melody.
+const PIANO_BASS = [0, 0, 5, 5, 3, 3, 4, 4];
+const PIANO_TUNE = [9, 11, 12, 11, 9, 7, 9, 10, 11, 9, 7, 9, 12, 11, 9, 7];
+const SAX_TUNE = [7, 5, 4, 3, 4, 5, 2, 1, 0, 2, 3, 6];
 
 export class DemoTracker {
   constructor() {
@@ -159,6 +163,33 @@ export class DemoTracker {
       const kneeLift = 0.08 * Math.pow(Math.sin(Math.PI * Math.min(1, kf / 0.5)), 0.8);
       set(26, 0.4, 0.78 - kneeLift);
       set(28, 0.39, 0.95 - kneeLift);
+    } else if (this.mode === 'piano') {
+      // Keys: 15 white keys across 3.6 shoulder-widths, centred, low notes on the left.
+      const keyX = (i) => -1.8 + (i + 0.5) * (3.6 / 15);
+      const tap = (f, lift) => 1.15 - lift * Math.pow(Math.sin(Math.PI * f), 0.8);
+      const lk = Math.floor(t / 0.5);
+      hand('L', rx(keyX(PIANO_BASS[lk % PIANO_BASS.length])), ry(tap(frac(t / 0.5), 0.45)));
+      const rk = Math.floor(t / 0.25);
+      const a = keyX(PIANO_TUNE[rk % PIANO_TUNE.length]);
+      const b = keyX(PIANO_TUNE[(rk + 1) % PIANO_TUNE.length]);
+      const f = frac(t / 0.25);
+      hand('R', rx(a + (b - a) * smoothstep(f)), ry(tap(f, 0.4)));
+    } else if (this.mode === 'sax') {
+      // Right hand slides along the sax (from the mouth towards the right hip); left hand
+      // rests on the upper keys.
+      const mouth = { x: 0.5 + sway, y: 0.23 + bob };
+      const dx = -0.73, dy = 2.26; // direction to the hip, in shoulder-widths
+      const len = Math.hypot(dx, dy);
+      const along = (u) => ({ x: mouth.x + (dx / len) * u * SHOULDER_X, y: mouth.y + (dy / len) * u * SHOULDER_Y });
+      const zoneU = (z) => 0.42 + (z + 0.5) * (1.4 / 8); // zone centres, as the sax measures them
+      const step = Math.floor(t / 0.5);
+      const f = Math.min(1, frac(t / 0.5) / 0.35);
+      const u0 = zoneU(SAX_TUNE[step % SAX_TUNE.length]);
+      const u1 = zoneU(SAX_TUNE[(step + 1) % SAX_TUNE.length]);
+      const p = along(u0 + (u1 - u0) * smoothstep(f));
+      hand('R', p.x, p.y);
+      const q = along(0.35);
+      hand('L', q.x + 0.02, q.y);
     } else if (this.mode === 'trombone') {
       const mouth = { x: 0.5 + sway, y: 0.23 + bob };
       const step = Math.floor(t / 0.5);
