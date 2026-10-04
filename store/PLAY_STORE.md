@@ -8,7 +8,7 @@ checklist when you're ready to publish.
 | Requirement | Status |
 | --- | --- |
 | App bundle (`.aab`) | Built by the **Build Android app** workflow once your upload key is added (step 2), as `AirGuitarHero-GooglePlay.aab` |
-| Free + paid versions | Guitar is free; a €2/month subscription (`full_access`) unlocks every other instrument (step 4) |
+| Free + paid versions | Guitar is free; a €2/month subscription (`full_access`) with a 7-day free trial unlocks every other instrument (step 4) |
 | Target API level | Android 16 (API 36), which meets Play's current requirement |
 | Increasing version code | Automatic: each build uses the workflow run number |
 | App icon, 512 × 512 | `store/icon-512.png` |
@@ -97,7 +97,7 @@ There are two builds of the app:
 > 🎵 CHORD SETS: Campfire, Rock power chords, Blues and Moody.
 > ✋ LEFT-HANDED MODE: swap your hands.
 > 🆓 FREE TO PLAY: guitar is free forever. Unlock drums, trombone and every new instrument we add
-> with Full Access for €2 a month. Cancel anytime. No ads.
+> with Full Access: try it FREE for 7 days, then €2 a month. Cancel anytime. No ads.
 > 🔒 PRIVATE: the camera is processed on your phone and never recorded or uploaded.
 > 📴 WORKS OFFLINE: no account, no ads, no internet needed.
 >
@@ -143,8 +143,17 @@ There are two builds of the app:
    - **Grace period / account hold:** keep Google's defaults (they help keep subscribers whose
      card fails).
    - **Activate** the base plan.
-4. **Optional free trial:** add an **offer** to the base plan, for example "7-day free
-   trial, new customers only". Google shows it at checkout automatically, with no app change.
+4. **7-day free trial.** In the `monthly` base plan, **Add offer**:
+   - **Offer ID:** `free-trial` (must match exactly; the app looks for this ID)
+   - **Eligibility:** *New customer acquisition → Never had this subscription*
+   - **Phases:** one **Free trial** phase of **7 days**
+   - **Activate** the offer.
+
+   Google Play only shows the offer to people who have never subscribed. For them the app
+   shows **"Start 7-day free trial"** with the terms "Free for 7 days, then €2,00 per month…
+   Cancel before the trial ends and you won't be charged." Everyone else sees the normal
+   monthly price. Google charges automatically when the trial ends, and sends the user a
+   reminder before it does.
 5. **Test it without paying:** **Settings → License testing**, add your Google account (and
    your testers'). Testers see test cards at checkout and are never charged, and test
    subscriptions renew every **5 minutes** instead of every month, so you can watch renewals
@@ -152,7 +161,8 @@ There are two builds of the app:
    (any testing track), not in the sideloaded test APK.
 
 How it works in the app: tapping a locked instrument (🔒) opens the unlock screen, with
-**"Unlock everything for €2,00/month"** (in the buyer's own currency), the renewal terms,
+**"Start 7-day free trial"** for new users or **"Unlock everything for €2,00/month"** (in the
+buyer's own currency) for returning ones, the renewal terms,
 **Watch a demo first** and **Restore subscription**. Subscribers get **Manage subscription**
 in ⚙︎ Settings, which opens Google Play's page for cancelling. The app checks with Google
 Play every time it starts:

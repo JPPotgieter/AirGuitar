@@ -4,6 +4,10 @@ import { BUILD } from './version.js';
 // Play Console: Monetize -> Subscriptions. Product ID and base plan ID must match exactly.
 export const PRODUCT_ID = 'full_access';
 export const PLAN_ID = 'monthly';
+// Free-trial offer on the monthly plan (Play Console offer ID). Google Play only lists it for
+// people who are eligible (new subscribers), so if it's there, we offer the trial.
+export const TRIAL_OFFER_ID = 'free-trial';
+export const TRIAL_DAYS = 7;
 const TYPE = 'subs';
 export const FREE_INSTRUMENTS = ['guitar'];
 export const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.jppotgieter.airguitar';
@@ -24,6 +28,8 @@ export class Entitlements {
     this.onChange = onChange;
     this.plugin = BUILD.channel === 'play' ? billingPlugin() : null;
     this.price = null;
+    this.trial = null; // eligible free-trial offer, if any
+    this.base = null; // the plain monthly plan
     this.ready = false;
     let cached = false;
     try {
@@ -59,11 +65,10 @@ export class Entitlements {
       const { products } = await this.plugin.getProducts({ productIdentifiers: [PRODUCT_ID], productType: TYPE });
       // For subscriptions the plugin returns one entry per offer; prefer our monthly base plan.
       // (On Android it reports the base plan in `identifier` and the product in `planIdentifier`.)
-      const plan =
-        products?.find((p) => (p.identifier === PLAN_ID || p.planIdentifier === PLAN_ID) && !p.offerId) ||
-        products?.find((p) => p.identifier === PLAN_ID || p.planIdentifier === PLAN_ID) ||
-        products?.[0];
-      this.price = plan?.priceString || null;
+      const onPlan = (p) => p.identifier === PLAN_ID || p.planIdentifier === PLAN_ID;
+      this.base = products?.find((p) => onPlan(p) && !p.offerId) || products?.find(onPlan) || products?.[0] || null;
+      this.trial = products?.find((p) => onPlan(p) && p.offerId === TRIAL_OFFER_ID) || null;
+      this.price = this.base?.priceString || null;
       this.ready = true;
       await this.refresh();
     } catch (e) {
@@ -88,14 +93,23 @@ export class Entitlements {
     if (!this.canBuy) throw new Error('Purchases are only available in the Google Play app.');
     let t;
     try {
-      t = await this.plugin.purchaseProduct({ productIdentifier: PRODUCT_ID, planIdentifier: PLAN_ID, productType: TYPE });
+      // Ask for the exact offer: the free trial when eligible, otherwise the plain monthly plan.
+      const offerToken = (this.trial || this.base)?.offerToken;
+      t = await this.plugin.purchaseProduct({
+        productIdentifier: PRODUCT_ID,
+        planIdentifier: PLAN_ID,
+        productType: TYPE,
+        ...(offerToken ? { offerToken } : {}),
+      });
     } catch (e) {
       if (/cancel/i.test(String(e?.message || e?.code || e))) return 'cancelled';
       throw e;
     }
     if (isPurchased(t)) {
+      const trial = !!this.trial;
+      this.trial = null; // one trial per customer
       this.set(true);
-      return 'unlocked';
+      return trial ? 'trial' : 'unlocked';
     }
     if (isPending(t)) return 'pending';
     await this.refresh();

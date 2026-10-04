@@ -1,0 +1,24 @@
+diff --git a/node_modules/@capgo/native-purchases/android/src/main/java/ee/forgr/nativepurchases/NativePurchasesPlugin.java b/node_modules/@capgo/native-purchases/android/src/main/java/ee/forgr/nativepurchases/NativePurchasesPlugin.java
+index da1584f..5c0968a 100644
+--- a/node_modules/@capgo/native-purchases/android/src/main/java/ee/forgr/nativepurchases/NativePurchasesPlugin.java
++++ b/node_modules/@capgo/native-purchases/android/src/main/java/ee/forgr/nativepurchases/NativePurchasesPlugin.java
+@@ -693,7 +693,19 @@ public class NativePurchasesPlugin extends Plugin {
+                                 ProductDetails.SubscriptionOfferDetails selectedOfferDetails = null;
+                                 assert productDetailsItem.getSubscriptionOfferDetails() != null;
+                                 Log.d(TAG, "Available offer details count: " + productDetailsItem.getSubscriptionOfferDetails().size());
++                                // Air Guitar Hero patch: honour an explicit offerToken (e.g. a free-trial offer)
++                                // instead of whichever offer for the base plan Google happens to list first.
++                                if (offerToken != null && !offerToken.isEmpty()) {
++                                    for (ProductDetails.SubscriptionOfferDetails offerDetails : productDetailsItem.getSubscriptionOfferDetails()) {
++                                        if (offerToken.equals(offerDetails.getOfferToken())) {
++                                            selectedOfferDetails = offerDetails;
++                                            Log.d(TAG, "Using requested offer: " + offerDetails.getOfferId());
++                                            break;
++                                        }
++                                    }
++                                }
+                                 for (ProductDetails.SubscriptionOfferDetails offerDetails : productDetailsItem.getSubscriptionOfferDetails()) {
++                                    if (selectedOfferDetails != null) break;
+                                     Log.d(TAG, "Checking offer: " + offerDetails.getBasePlanId());
+                                     if (offerDetails.getBasePlanId().equals(planIdentifier)) {
+                                         selectedOfferDetails = offerDetails;

@@ -8,7 +8,7 @@ import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
 import { VERSION, BUILD } from './version.js';
-import { Entitlements, PLAY_URL } from './purchases.js';
+import { Entitlements, PLAY_URL, TRIAL_DAYS } from './purchases.js';
 
 const $ = (id) => document.getElementById(id);
 const settings = loadSettings();
@@ -476,6 +476,9 @@ function renderPaywall() {
   if (store.unlocked) {
     buy.textContent = '✅ Unlocked. Rock on!';
     buy.disabled = true;
+  } else if (store.canBuy && store.trial) {
+    buy.textContent = `Start ${TRIAL_DAYS}-day free trial`;
+    buy.disabled = false;
   } else if (store.canBuy) {
     buy.textContent = `Unlock everything for ${store.price || '€2'}/month`;
     buy.disabled = false;
@@ -490,9 +493,17 @@ function renderPaywall() {
   $('restore').classList.toggle('hidden', !store.plugin || store.unlocked);
   $('manage-sub').classList.toggle('hidden', !store.plugin || !store.unlocked);
   // Subscription terms, as Google Play requires them to be clear before buying.
-  $('paywall-terms').textContent = store.canBuy
-    ? `${store.price || '€2'} per month. Renews automatically until you cancel. Cancel anytime in Google Play.`
-    : '';
+  $('paywall-lead').textContent =
+    store.canBuy && store.trial
+      ? `Try every instrument free for ${TRIAL_DAYS} days, now and in the future:`
+      : 'Subscribe to unlock every instrument, now and in the future:';
+  const price = store.price || '€2';
+  $('paywall-terms').textContent = !store.canBuy
+    ? ''
+    : store.trial
+      ? `Free for ${TRIAL_DAYS} days, then ${price} per month. Renews automatically until you cancel. ` +
+        `Cancel in Google Play before the trial ends and you won't be charged.`
+      : `${price} per month. Renews automatically until you cancel. Cancel anytime in Google Play.`;
 }
 
 $('paywall-buy').addEventListener('click', async () => {
@@ -505,8 +516,11 @@ $('paywall-buy').addEventListener('click', async () => {
   $('paywall-buy').disabled = true;
   try {
     const result = await store.buy();
-    if (result === 'unlocked') {
-      msg.textContent = '🎉 Thanks for subscribing! All instruments are unlocked.';
+    if (result === 'unlocked' || result === 'trial') {
+      msg.textContent =
+        result === 'trial'
+          ? `🎉 Your ${TRIAL_DAYS}-day free trial has started! All instruments are unlocked.`
+          : '🎉 Thanks for subscribing! All instruments are unlocked.';
       setInstrument(paywallFor);
       setTimeout(closePaywall, 1200);
     } else if (result === 'pending') {
