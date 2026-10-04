@@ -19,7 +19,8 @@ Every push to GitHub builds the Android app automatically.
 
 1. On your Android phone, open
    **https://github.com/JPPotgieter/AirGuitar/releases/tag/android-latest**
-2. Tap **AirGuitarHero.apk** to download it, then open it.
+2. Tap **AirGuitarHero.apk** to download it, then open it. If the download stalls, get
+   **AirGuitarHero.zip** instead, open it in the Files app, extract it, and tap the APK.
 3. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.
 4. Open **Air Guitar Hero** and allow camera access.
 
