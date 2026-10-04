@@ -54,7 +54,7 @@ if ((process.env.LEVEL || 'normal') === 'normal') {
   for (const fps of [15, 24, 30]) {
     let c = 0, tot = 0, fh = 0;
     for (let s = 1; s <= 5; s++) { const r = run(fps, false, s * 97); c += r.caught; tot += r.total; fh += r.falseHits; }
-    if (c / tot < 0.95 || fh > 10) { ok = false; console.error(); }
+    if (c / tot < 0.95 || fh > 10) { ok = false; console.error(`FAIL at ${fps}fps: caught ${c}/${tot}, false hits ${fh}`); }
   }
   if (!ok) process.exit(1);
   console.log('OK: normal hits are reliably detected at 15-30 fps.');
