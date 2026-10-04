@@ -477,7 +477,7 @@ function renderPaywall() {
     buy.textContent = '✅ Unlocked. Rock on!';
     buy.disabled = true;
   } else if (store.canBuy) {
-    buy.textContent = `Unlock everything for ${store.price || '$4.99'}`;
+    buy.textContent = `Unlock everything for ${store.price || '€2'}/month`;
     buy.disabled = false;
   } else if (BUILD.channel === 'web') {
     buy.textContent = 'Get the app on Google Play';
@@ -488,6 +488,11 @@ function renderPaywall() {
   }
   $('paywall-restore').classList.toggle('hidden', !store.plugin || store.unlocked);
   $('restore').classList.toggle('hidden', !store.plugin || store.unlocked);
+  $('manage-sub').classList.toggle('hidden', !store.plugin || !store.unlocked);
+  // Subscription terms, as Google Play requires them to be clear before buying.
+  $('paywall-terms').textContent = store.canBuy
+    ? `${store.price || '€2'} per month. Renews automatically until you cancel. Cancel anytime in Google Play.`
+    : '';
 }
 
 $('paywall-buy').addEventListener('click', async () => {
@@ -501,7 +506,7 @@ $('paywall-buy').addEventListener('click', async () => {
   try {
     const result = await store.buy();
     if (result === 'unlocked') {
-      msg.textContent = '🎉 Thanks! All instruments are unlocked.';
+      msg.textContent = '🎉 Thanks for subscribing! All instruments are unlocked.';
       setInstrument(paywallFor);
       setTimeout(closePaywall, 1200);
     } else if (result === 'pending') {
@@ -516,7 +521,7 @@ async function restore() {
   const msg = $('paywall-msg');
   try {
     const ok = await store.restore();
-    msg.textContent = ok ? '✅ Purchase restored. All instruments unlocked.' : 'No previous purchase found on this Google account.';
+    msg.textContent = ok ? '✅ Subscription found. All instruments unlocked.' : 'No active subscription found on this Google account.';
   } catch (e) {
     msg.textContent = `Couldn't check your purchases (${e?.message || e}).`;
   }
@@ -540,6 +545,7 @@ $('paywall-demo').addEventListener('click', () => {
   }
 });
 $('paywall-close').addEventListener('click', closePaywall);
+$('manage-sub').addEventListener('click', () => store.manage().catch(() => {}));
 document.addEventListener('visibilitychange', () => {
   // A pending payment may have completed while the app was in the background.
   if (document.visibilityState === 'visible' && store.ready) store.refresh().then(() => renderPaywall()).catch(() => {});

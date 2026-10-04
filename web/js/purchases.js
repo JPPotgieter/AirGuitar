@@ -1,7 +1,10 @@
-// Free version: guitar. One Google Play in-app purchase unlocks every other instrument.
+// Free version: guitar. A monthly Google Play subscription unlocks every other instrument.
 import { BUILD } from './version.js';
 
-export const PRODUCT_ID = 'all_instruments';
+// Play Console: Monetize -> Subscriptions. Product ID and base plan ID must match exactly.
+export const PRODUCT_ID = 'full_access';
+export const PLAN_ID = 'monthly';
+const TYPE = 'subs';
 export const FREE_INSTRUMENTS = ['guitar'];
 export const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.jppotgieter.airguitar';
 const CACHE_KEY = 'airguitar-unlocked';
@@ -53,8 +56,14 @@ export class Entitlements {
     try {
       const { isBillingSupported } = await this.plugin.isBillingSupported();
       if (!isBillingSupported) return;
-      const { products } = await this.plugin.getProducts({ productIdentifiers: [PRODUCT_ID], productType: 'inapp' });
-      this.price = products?.[0]?.priceString || null;
+      const { products } = await this.plugin.getProducts({ productIdentifiers: [PRODUCT_ID], productType: TYPE });
+      // For subscriptions the plugin returns one entry per offer; prefer our monthly base plan.
+      // (On Android it reports the base plan in `identifier` and the product in `planIdentifier`.)
+      const plan =
+        products?.find((p) => (p.identifier === PLAN_ID || p.planIdentifier === PLAN_ID) && !p.offerId) ||
+        products?.find((p) => p.identifier === PLAN_ID || p.planIdentifier === PLAN_ID) ||
+        products?.[0];
+      this.price = plan?.priceString || null;
       this.ready = true;
       await this.refresh();
     } catch (e) {
@@ -64,10 +73,11 @@ export class Entitlements {
     this.onChange();
   }
 
-  // Ask Google Play what this account owns. Authoritative when it answers (handles refunds too).
+  // Ask Google Play whether this account has an active subscription. Authoritative when it
+  // answers: cancelled subscriptions stay active until the paid month ends, then drop off.
   async refresh() {
     if (!this.plugin) return;
-    const { purchases } = await this.plugin.getPurchases({ productType: 'inapp' });
+    const { purchases } = await this.plugin.getPurchases({ productType: TYPE });
     const mine = (purchases || []).filter((p) => p.productIdentifier === PRODUCT_ID);
     this.set(mine.some(isPurchased));
     this.pending = !this.unlocked && mine.some(isPending);
@@ -78,7 +88,7 @@ export class Entitlements {
     if (!this.canBuy) throw new Error('Purchases are only available in the Google Play app.');
     let t;
     try {
-      t = await this.plugin.purchaseProduct({ productIdentifier: PRODUCT_ID, productType: 'inapp' });
+      t = await this.plugin.purchaseProduct({ productIdentifier: PRODUCT_ID, planIdentifier: PLAN_ID, productType: TYPE });
     } catch (e) {
       if (/cancel/i.test(String(e?.message || e?.code || e))) return 'cancelled';
       throw e;
@@ -90,6 +100,11 @@ export class Entitlements {
     if (isPending(t)) return 'pending';
     await this.refresh();
     return this.unlocked ? 'unlocked' : 'cancelled';
+  }
+
+  // Google Play's own page for cancelling or changing the subscription.
+  async manage() {
+    await this.plugin?.manageSubscriptions?.();
   }
 
   async restore() {

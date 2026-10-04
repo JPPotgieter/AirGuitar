@@ -124,7 +124,7 @@ button {
   font: inherit;
   cursor: pointer;
 }
-#close, #customize2, #restore, #intro button, #paywall button {
+#close, #customize2, #restore, #manage-sub, #intro button, #paywall button {
   display: block;
   width: 100%;
   padding: 14px;
@@ -316,3 +316,4 @@ button {
 }
 #paywall .small { font-size: 13px; color: #aaa; }
 #paywall-msg:empty { display: none; }
+#paywall-terms:empty { display: none; }

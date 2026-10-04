@@ -26,10 +26,10 @@ rock-star avatar copies every move you make, and your imaginary instrument makes
 
 ### Free and full versions
 
-Guitar is free. A one-time Google Play purchase unlocks drums, trombone and every instrument
-added later. Locked instruments show 🔒 and can still be previewed with **Watch a demo first**.
+Guitar is free. A **€2/month** Google Play subscription unlocks drums, trombone and every
+instrument added later. Locked instruments show 🔒 and can still be previewed with **Watch a demo first**.
 Test APKs from GitHub have everything unlocked. See [`store/PLAY_STORE.md`](store/PLAY_STORE.md)
-for setting up the purchase in Play Console.
+for setting up the subscription in Play Console.
 
 ### Everything else
 
@@ -95,7 +95,7 @@ The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
 | Drums: kit layout and hit detection | `web/js/instruments/drums.js` |
 | Trombone: slide position and stroke detection | `web/js/instruments/trombone.js` |
 | Drum and trombone sound synthesis | `web/js/sounds.js` |
-| Free/full version: Google Play in-app purchase ([@capgo/native-purchases](https://github.com/Cap-go/capacitor-native-purchases)) | `web/js/purchases.js` |
+| Free/full version: Google Play subscription ([@capgo/native-purchases](https://github.com/Cap-go/capacitor-native-purchases)) | `web/js/purchases.js` |
 | Drawing the stage, avatar, guitar and music notes on a canvas | `web/js/render.js` |
 | Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `web/js/audio.js` |
 | Chord shapes and chord sets | `web/js/chords.js` |

@@ -8,7 +8,7 @@ checklist when you're ready to publish.
 | Requirement | Status |
 | --- | --- |
 | App bundle (`.aab`) | Built by the **Build Android app** workflow once your upload key is added (step 2), as `AirGuitarHero-GooglePlay.aab` |
-| Free + paid versions | Guitar is free; a one-time in-app purchase (`all_instruments`) unlocks every other instrument (step 4) |
+| Free + paid versions | Guitar is free; a €2/month subscription (`full_access`) unlocks every other instrument (step 4) |
 | Target API level | Android 16 (API 36), which meets Play's current requirement |
 | Increasing version code | Automatic: each build uses the workflow run number |
 | App icon, 512 × 512 | `store/icon-512.png` |
@@ -62,7 +62,7 @@ There are two builds of the app:
 | File | For | Instruments | Updates |
 | --- | --- | --- | --- |
 | `AirGuitarHero.apk` | You, sideloading test builds | All unlocked | In-app "Update" button |
-| `AirGuitarHero-GooglePlay.aab` | Google Play | Guitar free, the rest via purchase | Through Google Play only (Play policy) |
+| `AirGuitarHero-GooglePlay.aab` | Google Play | Guitar free, the rest via subscription | Through Google Play only (Play policy) |
 
 ## 3. Create the app in Play Console
 
@@ -70,7 +70,7 @@ There are two builds of the app:
 
 ### Store listing (copy and paste)
 
-**Pricing:** the app is **Free** (with an in-app purchase).
+**Pricing:** the app is **Free** (with in-app purchases: the subscription).
 
 **App name** (30 characters max):
 > Air Guitar Hero
@@ -96,8 +96,8 @@ There are two builds of the app:
 > its own look and sound.
 > 🎵 CHORD SETS: Campfire, Rock power chords, Blues and Moody.
 > ✋ LEFT-HANDED MODE: swap your hands.
-> 🆓 FREE TO TRY: guitar is free forever. Unlock drums, trombone and every future instrument with
-> one small purchase. No ads, no subscription.
+> 🆓 FREE TO PLAY: guitar is free forever. Unlock drums, trombone and every new instrument we add
+> with Full Access for €2 a month. Cancel anytime. No ads.
 > 🔒 PRIVATE: the camera is processed on your phone and never recorded or uploaded.
 > 📴 WORKS OFFLINE: no account, no ads, no internet needed.
 >
@@ -125,29 +125,43 @@ There are two builds of the app:
     as "collected".)
 - **Government app / financial features / health:** No.
 
-## 4. Set up the "unlock all instruments" purchase
+## 4. Set up the €2/month subscription
 
-1. Upload an `.aab` to a testing track first. Play only lets you create products once the
-   app's first bundle is uploaded.
-2. **Monetize → Products → In-app products → Create product**
-   - **Product ID:** `all_instruments` (must match exactly, and can't be changed later)
-   - **Name:** Unlock all instruments
-   - **Description:** Drums, trombone and every instrument added in future. One-time purchase.
-   - **Price:** $4.99 (or $5.00). Play converts it to local prices, and the app shows the local
-     price automatically.
-   - **Activate** the product.
-3. **Test it without paying:** **Settings → License testing**, add your Google account (and
-   your testers'). License testers see "Test card, always approves" at checkout and are never
-   charged. Purchases only work in a copy installed **from Google Play** (any testing track),
-   not in the sideloaded test APK.
-4. To try it again after a test purchase, refund it under **Order management**. The app
-   re-locks the instruments the next time it starts.
+1. Upload an `.aab` to a testing track first. Play only lets you create subscriptions once the
+   app's first bundle is uploaded. You also need a **payments profile** (Play Console →
+   Settings → Payments profile) to sell anything.
+2. **Monetize → Subscriptions → Create subscription**
+   - **Product ID:** `full_access` (must match exactly, and can't be changed later)
+   - **Name:** Air Guitar Hero Full Access
+   - **Benefits** (shown by Google at checkout): "All instruments: drums, trombone and every new
+     instrument", "Guitar stays free"
+3. Inside it, **Add base plan**
+   - **Base plan ID:** `monthly` (must match exactly)
+   - **Type:** Auto-renewing, **Billing period:** 1 month
+   - **Price:** set **€2.00** for euro countries. Use **Set prices → update exchange rates**
+     to fill in the other countries, or set them by hand.
+   - **Grace period / account hold:** keep Google's defaults (they help keep subscribers whose
+     card fails).
+   - **Activate** the base plan.
+4. **Optional free trial:** add an **offer** to the base plan, for example "7-day free
+   trial, new customers only". Google shows it at checkout automatically, with no app change.
+5. **Test it without paying:** **Settings → License testing**, add your Google account (and
+   your testers'). Testers see test cards at checkout and are never charged, and test
+   subscriptions renew every **5 minutes** instead of every month, so you can watch renewals
+   and cancellations happen. Subscriptions only work in a copy installed **from Google Play**
+   (any testing track), not in the sideloaded test APK.
 
-How it works in the app: tapping a locked instrument (🔒) opens the unlock screen, with the
-price, **Watch a demo first** and **Restore purchase**. The purchase is checked with Google
-Play every time the app starts, so it carries over to a new phone signed in to the same
-Google account, and refunds re-lock it. The app acknowledges purchases automatically.
-Google refunds purchases that aren't acknowledged within 3 days.
+How it works in the app: tapping a locked instrument (🔒) opens the unlock screen, with
+**"Unlock everything for €2,00/month"** (in the buyer's own currency), the renewal terms,
+**Watch a demo first** and **Restore subscription**. Subscribers get **Manage subscription**
+in ⚙︎ Settings, which opens Google Play's page for cancelling. The app checks with Google
+Play every time it starts:
+- a new phone signed in to the same Google account unlocks automatically
+- a cancelled subscription keeps working until the paid month ends, then the instruments lock again
+- refunds lock immediately
+
+The app acknowledges subscriptions automatically. Google refunds them if they aren't
+acknowledged within 3 days.
 
 ## 5. Upload and test
 

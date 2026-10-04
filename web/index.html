@@ -44,7 +44,8 @@
     <label class="check"><input type="checkbox" id="lefty" /> Left-handed</label>
     <label class="check"><input type="checkbox" id="showcam" /> Show camera preview</label>
     <button id="customize2">🎨 Customise avatar &amp; guitar</button>
-    <button id="restore" class="hidden">Restore purchase</button>
+    <button id="restore" class="hidden">Restore subscription</button>
+    <button id="manage-sub" class="hidden">Manage subscription</button>
     <button id="close">Done</button>
   </div>
 
@@ -65,7 +66,7 @@
       <button id="paywall-close" aria-label="Close">✕</button>
       <div class="big">🔓</div>
       <h2 id="paywall-title">Unlock all instruments</h2>
-      <p>A one-time purchase unlocks every instrument, now and in the future:</p>
+      <p>Subscribe to unlock every instrument, now and in the future:</p>
       <ul>
         <li>🥁 <b>Drums</b>: snare, toms, hi-hat, cymbals and kick</li>
         <li>🎺 <b>Trombone</b>: slide your way through the notes</li>
@@ -73,9 +74,10 @@
       </ul>
       <button id="paywall-buy" class="primary">Unlock everything</button>
       <button id="paywall-demo">Watch a demo first</button>
-      <button id="paywall-restore" class="hidden">Restore purchase</button>
+      <button id="paywall-restore" class="hidden">Restore subscription</button>
       <p id="paywall-msg" role="status"></p>
-      <p class="small">🎸 Guitar is always free. No ads, no subscription.</p>
+      <p id="paywall-terms" class="small"></p>
+      <p class="small">🎸 Guitar is always free. No ads.</p>
     </div>
   </div>
 
