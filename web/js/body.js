@@ -9,6 +9,16 @@ export const LM = {
 };
 
 export const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+
+// MediaPipe always returns all 33 points, guessing the ones it can't see (e.g. hands below
+// the frame when only your face is visible). Its visibility score tells real from guessed.
+const SEEN = 0.6;
+const seen = (lm) => (lm.visibility ?? 1) > SEEN;
+
+// Is this hand (wrist and index finger) really visible right now? side: 'L' | 'R'
+export function handVisible(lms, side) {
+  return side === 'L' ? seen(lms[LM.wristL]) && seen(lms[LM.indexL]) : seen(lms[LM.wristR]) && seen(lms[LM.indexR]);
+}
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // Fit the (mirrored) camera image inside the screen, anchored to the floor line.
@@ -44,9 +54,21 @@ export class LandmarkSmoother {
   }
 }
 
-export function buildBody(lms, aspect, W, H) {
+// handWeight: 0..1 per hand, how much to trust the tracked hand (0 = rest it at the side).
+export function buildBody(lms, aspect, W, H, handWeight = { L: 1, R: 1 }) {
   const P = (i) => toScreen(lms[i], aspect, W, H);
-  const shoulder = { L: P(LM.shoulderL), R: P(LM.shoulderR) };
+  let shoulder = { L: P(LM.shoulderL), R: P(LM.shoulderR) };
+  const earL = P(LM.earL);
+  const earR = P(LM.earR);
+  const earDist = dist(earL, earR);
+  if (!seen(lms[LM.shoulderL]) || !seen(lms[LM.shoulderR])) {
+    // Only the face is in view: place the shoulders from the head rather than from guesses.
+    const nose = P(LM.nose);
+    const half = Math.max(20, earDist * 1.3);
+    const dir = Math.sign(earL.x - earR.x) || -1; // screen side of the person's left
+    const y = nose.y + earDist * 1.9;
+    shoulder = { L: { x: nose.x + dir * half, y, v: 1 }, R: { x: nose.x - dir * half, y, v: 1 } };
+  }
   const S = Math.max(40, dist(shoulder.L, shoulder.R));
   const mid = lerp(shoulder.L, shoulder.R, 0.5);
 
@@ -66,21 +88,27 @@ export function buildBody(lms, aspect, W, H) {
   for (const side of ['L', 'R']) {
     const k = P(LM['knee' + side]);
     const a = P(LM['ankle' + side]);
-    legsSeen[side] = k.v > 0.5;
-    knee[side] = k.v > 0.5 ? k : legGuess(side, 1);
-    ankle[side] = a.v > 0.5 && k.v > 0.5 ? a : legGuess(side, 2);
+    legsSeen[side] = k.v > SEEN;
+    knee[side] = k.v > SEEN ? k : legGuess(side, 1);
+    ankle[side] = a.v > SEEN && k.v > SEEN ? a : legGuess(side, 2);
   }
-  const elbow = { L: P(LM.elbowL), R: P(LM.elbowR) };
-  const wrist = { L: P(LM.wristL), R: P(LM.wristR) };
-  const hand = {
-    L: lerp(wrist.L, P(LM.indexL), 0.6),
-    R: lerp(wrist.R, P(LM.indexR), 0.6),
-  };
+  const elbow = {}, wrist = {}, hand = {};
+  for (const side of ['L', 'R']) {
+    const w = Math.max(0, Math.min(1, handWeight[side]));
+    const out = Math.sign(shoulder[side].x - mid.x) || (side === 'L' ? -1 : 1);
+    // Resting pose: arm hanging relaxed at the side.
+    const restElbow = { x: shoulder[side].x + out * S * 0.12, y: shoulder[side].y + S * 0.95 };
+    const restWrist = { x: restElbow.x + out * S * 0.03, y: restElbow.y + S * 0.85 };
+    const restHand = { x: restWrist.x, y: restWrist.y + S * 0.12 };
+    const tw = P(LM['wrist' + side]);
+    elbow[side] = lerp(restElbow, P(LM['elbow' + side]), w);
+    wrist[side] = lerp(restWrist, tw, w);
+    hand[side] = lerp(restHand, lerp(tw, P(LM['index' + side]), 0.6), w);
+  }
 
   const nose = P(LM.nose);
   const eyeL = P(LM.eyeL);
   const eyeR = P(LM.eyeR);
-  const earDist = dist(P(LM.earL), P(LM.earR));
   const r = Math.max(S * 0.32, earDist * 0.62);
   // Tilt from the eye line, measured left-to-right on screen so the head never flips over.
   const [ea, eb] = eyeL.x < eyeR.x ? [eyeL, eyeR] : [eyeR, eyeL];

@@ -3,7 +3,7 @@ import { GuitarAudio } from './audio.js';
 import { PoseTracker, DemoTracker } from './tracker.js';
 import { Renderer, drawGuitarThumb } from './render.js';
 import { AVATAR_OPTIONS, DEFAULT_LOOK, GUITARS, randomLook } from './looks.js';
-import { buildBody, LandmarkSmoother } from './body.js';
+import { buildBody, LandmarkSmoother, handVisible } from './body.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
@@ -24,6 +24,13 @@ const smoother = new LandmarkSmoother();
 let lastSeen = 0;
 let body = null;
 let mouth = 0;
+// Hands only count once they've been clearly visible for a moment (no playing on guesses).
+const HAND_STEADY_MS = 200;
+const hands = {
+  L: { since: null, active: false, weight: 0 },
+  R: { since: null, active: false, weight: 0 },
+};
+let handsMissingSince = null;
 let view = null; // auto-zoom so the avatar + instrument always fit on screen
 let lastFrame = performance.now();
 const stats = { frames: 0, poses: 0 };
@@ -214,12 +221,24 @@ function loop(now) {
       stats.poses++;
       lastSeen = now;
       const W = renderer.w, H = renderer.h;
-      body = buildBody(smoother.push(raw), active.aspect, W, H);
+      for (const side of ['L', 'R']) {
+        const h = hands[side];
+        if (handVisible(raw, side)) h.since ??= now;
+        else h.since = null;
+        h.active = h.since !== null && now - h.since >= HAND_STEADY_MS;
+        // Fade the avatar's arm between resting and tracked.
+        h.weight += ((h.active ? 1 : 0) - h.weight) * Math.min(1, dt * 8);
+      }
+      body = buildBody(smoother.push(raw), active.aspect, W, H, { L: hands.L.weight, R: hands.R.weight });
       // Unsmoothed body for hit/strum detection: no added lag.
       const rawBody = buildBody(raw, active.aspect, W, H);
+      rawBody.handActive = { L: hands.L.active, R: hands.R.active };
       instrument.update(body, rawBody, dt, now);
       updateView(body, dt);
-      status('');
+      // Nudge the player when we can see them but not their hands.
+      if (hands.L.active || hands.R.active) handsMissingSince = null;
+      else handsMissingSince ??= now;
+      status(active === tracker && handsMissingSince !== null && now - handsMissingSince > 1200 ? 'Show your hands to play 🙌' : '');
     } else if (raw === null && now - lastSeen > 800) {
       status(`Step back so the camera can see your upper body ${INSTRUMENTS[settings.instrument].emoji}`);
       instrument.lost();
@@ -654,4 +673,4 @@ if (params.get('instrument') && INSTRUMENTS[params.get('instrument')]) setInstru
 if (params.has('demo')) start(true);
 
 // Exposed for debugging in the browser console.
-window.airguitar = { audio, renderer, settings, stats, get instrument() { return instrument; } };
+window.airguitar = { audio, renderer, settings, stats, hands, get instrument() { return instrument; } };

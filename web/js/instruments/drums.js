@@ -88,13 +88,20 @@ export class DrumsInstrument {
     this.pads = this.layout(body);
     for (const k of Object.keys(this.flash)) this.flash[k] = Math.max(0, this.flash[k] - dt * 4);
     const t = now / 1000;
+    const active = raw.handActive || { L: true, R: true };
     for (const side of ['L', 'R']) {
       const h = raw.hand[side];
-      const speed = this.hands[side].push(h.y / raw.S, t);
-      if (speed) this.hitNearest(h, speed / 14);
+      if (!active[side]) {
+        this.hands[side].reset(); // hand not really seen: no hits from guessed positions
+      } else {
+        const speed = this.hands[side].push(h.y / raw.S, t);
+        if (speed) this.hitNearest(h, speed / 14);
+      }
       if (raw.legsSeen[side]) {
         const k = this.knees[side].push(raw.knee[side].y / raw.S, t);
         if (k) this.hit(this.pads[0], Math.min(1, k / 6));
+      } else {
+        this.knees[side].reset();
       }
     }
   }

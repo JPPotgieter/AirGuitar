@@ -35,7 +35,13 @@ export class TromboneInstrument {
   }
 
   update(body, raw, dt, now) {
+    const active = raw.handActive || { L: true, R: true };
+    this.resting = !active[this.app.settings.lefty ? 'L' : 'R'];
     this.geo = this.place(body, dt);
+    if (this.resting) {
+      this.lost(); // slide hand not really seen: don't play guessed notes
+      return;
+    }
     // Pick the note from the live (unsmoothed) hand so it's right the moment the slide stops.
     const e = this.extension(raw.hand[this.geo.slideSide]);
     const f = ((e - SLIDE_IN) / (SLIDE_OUT - SLIDE_IN)) * NOTES.length;
@@ -53,7 +59,8 @@ export class TromboneInstrument {
     const holdSide = lefty ? 'R' : 'L';
     const side = Math.sign(b.shoulder[slideSide].x - b.shoulder[holdSide].x) || 1;
     const origin = b.mouth;
-    const to = b.hand[slideSide];
+    // Slide hand out of view: hold the trombone level instead of pointing at a guess.
+    const to = this.resting ? { x: origin.x + side * b.S * 1.6, y: origin.y + b.S * 0.1 } : b.hand[slideSide];
     let ang = Math.atan2(to.y - origin.y, (to.x - origin.x) * side);
     ang = Math.max(-0.6, Math.min(0.7, ang));
     if (!Number.isFinite(ang)) ang = this.angle ?? 0;
@@ -122,7 +129,7 @@ export class TromboneInstrument {
     const g = this.geo;
     if (!g) return;
     const { ctx } = r;
-    const e = this.extension(scene.body.hand[g.slideSide]);
+    const e = this.resting ? 1.5 : this.extension(scene.body.hand[g.slideSide]);
     ctx.save();
     ctx.translate(g.origin.x, g.origin.y);
     ctx.rotate(Math.atan2(g.dir.y, g.dir.x));

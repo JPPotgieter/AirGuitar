@@ -28,9 +28,12 @@ export class GuitarInstrument {
   }
 
   update(body, raw, dt, now) {
+    const active = raw.handActive || { L: true, R: true };
+    this.resting = !active[this.app.settings.lefty ? 'R' : 'L'];
     this.geo = this.place(body, dt);
-    this.updateZone(body);
-    this.detectStrum(raw, now);
+    if (active[this.geo.fretSide]) this.updateZone(body);
+    if (active[this.geo.strumSide]) this.detectStrum(raw, now);
+    else this.lost(); // forget the last position so the hand reappearing doesn't strum
   }
 
   lost() {
@@ -48,7 +51,8 @@ export class GuitarInstrument {
 
     // Neck points at the fretting hand, within a guitar-ish range of angles.
     const side = Math.sign(b.shoulder[fretSide].x - b.shoulder[strumSide].x) || 1;
-    const to = b.hand[fretSide];
+    // Fretting hand out of view: hold the neck at a classic playing angle instead.
+    const to = this.resting ? { x: origin.x + side * b.S * 2, y: origin.y - b.S * 0.8 } : b.hand[fretSide];
     let ang = Math.atan2(to.y - origin.y, (to.x - origin.x) * side);
     ang = Math.max(-1.25, Math.min(0.45, ang));
     if (!Number.isFinite(ang)) ang = this.neckAngle ?? 0;
