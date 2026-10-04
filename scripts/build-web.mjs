@@ -30,9 +30,17 @@ if (!fs.existsSync(modelCache)) {
 }
 fs.copyFileSync(modelCache, path.join(vendor, 'pose_landmarker_lite.task'));
 
-// Version info for the in-app update check (CI sets these; local builds are "dev").
+// Version and build channel, baked into the app:
+//   test: sideloaded APK from GitHub. Everything unlocked, self-update prompt.
+//   play: Google Play build. Guitar free, other instruments via in-app purchase.
+//   web:  the website. Guitar only, with a link to the Play Store.
 const code = Number(process.env.VERSION_CODE || 0);
 const name = process.env.VERSION_NAME || 'dev';
-fs.writeFileSync(path.join(out, 'js', 'version.js'), `export const VERSION = ${JSON.stringify({ code, name })};\n`);
+const channel = process.env.CHANNEL || 'web';
+if (!['test', 'play', 'web'].includes(channel)) throw new Error(`Unknown CHANNEL "${channel}"`);
+fs.writeFileSync(
+  path.join(out, 'js', 'version.js'),
+  `export const VERSION = ${JSON.stringify({ code, name })};\nexport const BUILD = ${JSON.stringify({ channel })};\n`
+);
 
-console.log(`Built www/ (version ${name})`);
+console.log(`Built www/ (version ${name}, ${channel} build)`);

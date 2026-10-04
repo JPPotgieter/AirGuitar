@@ -7,7 +7,8 @@ import { buildBody, LandmarkSmoother } from './body.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
-import { VERSION } from './version.js';
+import { VERSION, BUILD } from './version.js';
+import { Entitlements, PLAY_URL } from './purchases.js';
 
 const $ = (id) => document.getElementById(id);
 const settings = loadSettings();
@@ -42,6 +43,14 @@ const INSTRUMENTS = {
   drums: { name: 'Drums', emoji: '🥁', make: () => new DrumsInstrument(app) },
   trombone: { name: 'Trombone', emoji: '🎺', make: () => new TromboneInstrument(app) },
 };
+const store = new Entitlements(() => {
+  // Purchase state changed (bought, restored, refunded): refresh locks everywhere.
+  if (store.isLocked(settings.instrument) && !(tracker instanceof DemoTracker)) settings.instrument = 'guitar';
+  if (instrument && instrument.id !== settings.instrument) instrument = INSTRUMENTS[settings.instrument].make();
+  if (instrument) applySettings();
+  renderPaywall();
+});
+if (store.isLocked(settings.instrument)) settings.instrument = 'guitar';
 let instrument = INSTRUMENTS[settings.instrument].make();
 
 const HOW = {
@@ -77,7 +86,13 @@ function saveSettings() {
   } catch {}
 }
 
-function setInstrument(id) {
+// preview: allow a locked instrument for the demo, so people can see what they'd get.
+function setInstrument(id, { preview = false } = {}) {
+  if (store.isLocked(id) && !preview) {
+    openPaywall(id);
+    applySettings(); // put the pickers back on the current instrument
+    return;
+  }
   if (instrument.id === id) return;
   settings.instrument = id;
   instrument = INSTRUMENTS[id].make();
@@ -153,7 +168,14 @@ function applySettings() {
   $('showcam').checked = settings.showCam;
   $('instrument').value = settings.instrument;
   for (const el of document.querySelectorAll('.guitar-only')) el.classList.toggle('hidden', settings.instrument !== 'guitar');
-  for (const b of document.querySelectorAll('#pick-instrument button')) b.classList.toggle('on', b.dataset.id === settings.instrument);
+  for (const b of document.querySelectorAll('#pick-instrument button')) {
+    b.classList.toggle('on', b.dataset.id === settings.instrument);
+    b.classList.toggle('locked', store.isLocked(b.dataset.id));
+  }
+  for (const o of $('instrument').options) {
+    const ins = INSTRUMENTS[o.value];
+    o.textContent = `${ins.emoji} ${ins.name}${store.isLocked(o.value) ? ' 🔒' : ''}`;
+  }
   $('how').innerHTML = ['Prop your phone up and step back so your upper body is in view.', ...HOW[settings.instrument]]
     .map((t) => `<li>${t}</li>`)
     .join('');
@@ -217,6 +239,11 @@ function loop(now) {
 }
 
 async function start(demo) {
+  // Only the demo may show a locked instrument.
+  if (!demo && store.isLocked(settings.instrument)) {
+    openPaywall(settings.instrument);
+    return;
+  }
   $('intro').classList.add('hidden');
   try {
     await audio.start();
@@ -381,7 +408,7 @@ for (const [id, ins] of Object.entries(INSTRUMENTS)) {
   $('instrument').appendChild(o);
   const b = document.createElement('button');
   b.dataset.id = id;
-  b.innerHTML = `<span>${ins.emoji}</span>${ins.name}`;
+  b.innerHTML = `<span>${ins.emoji}</span>${ins.name}<i class="lock">🔒</i>`;
   b.addEventListener('click', () => setInstrument(id));
   $('pick-instrument').appendChild(b);
 }
@@ -427,14 +454,107 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-// ---------- Updates (Android app) ----------
+// ---------- Unlock all instruments ----------
+
+let paywallFor = 'drums';
+
+function openPaywall(id) {
+  paywallFor = id;
+  $('paywall-msg').textContent = '';
+  renderPaywall();
+  $('paywall').classList.remove('hidden');
+}
+
+function closePaywall() {
+  $('paywall').classList.add('hidden');
+}
+
+function renderPaywall() {
+  const ins = INSTRUMENTS[paywallFor] || INSTRUMENTS.drums;
+  $('paywall-title').textContent = `${ins.emoji} ${ins.name} is in the full version`;
+  const buy = $('paywall-buy');
+  if (store.unlocked) {
+    buy.textContent = '✅ Unlocked. Rock on!';
+    buy.disabled = true;
+  } else if (store.canBuy) {
+    buy.textContent = `Unlock everything for ${store.price || '$4.99'}`;
+    buy.disabled = false;
+  } else if (BUILD.channel === 'web') {
+    buy.textContent = 'Get the app on Google Play';
+    buy.disabled = false;
+  } else {
+    buy.textContent = 'Purchases unavailable right now';
+    buy.disabled = true;
+  }
+  $('paywall-restore').classList.toggle('hidden', !store.plugin || store.unlocked);
+  $('restore').classList.toggle('hidden', !store.plugin || store.unlocked);
+}
+
+$('paywall-buy').addEventListener('click', async () => {
+  if (BUILD.channel === 'web' && !store.unlocked) {
+    window.open(PLAY_URL, '_blank');
+    return;
+  }
+  const msg = $('paywall-msg');
+  msg.textContent = '';
+  $('paywall-buy').disabled = true;
+  try {
+    const result = await store.buy();
+    if (result === 'unlocked') {
+      msg.textContent = '🎉 Thanks! All instruments are unlocked.';
+      setInstrument(paywallFor);
+      setTimeout(closePaywall, 1200);
+    } else if (result === 'pending') {
+      msg.textContent = 'Payment pending. Your instruments unlock as soon as it goes through.';
+    }
+  } catch (e) {
+    msg.textContent = `Couldn't complete the purchase (${e?.message || e}). Please try again.`;
+  }
+  renderPaywall();
+});
+async function restore() {
+  const msg = $('paywall-msg');
+  try {
+    const ok = await store.restore();
+    msg.textContent = ok ? '✅ Purchase restored. All instruments unlocked.' : 'No previous purchase found on this Google account.';
+  } catch (e) {
+    msg.textContent = `Couldn't check your purchases (${e?.message || e}).`;
+  }
+  renderPaywall();
+}
+$('paywall-restore').addEventListener('click', restore);
+$('restore').addEventListener('click', () => {
+  $('panel').classList.add('hidden');
+  openPaywall('drums');
+  restore();
+});
+$('paywall-demo').addEventListener('click', () => {
+  closePaywall();
+  setInstrument(paywallFor, { preview: true });
+  if (tracker instanceof PoseTracker) {
+    // Mid-session: switch to the demo performer for the preview.
+    tracker = new DemoTracker();
+    tracker.mode = paywallFor;
+  } else if (!tracker) {
+    start(true);
+  }
+});
+$('paywall-close').addEventListener('click', closePaywall);
+document.addEventListener('visibilitychange', () => {
+  // A pending payment may have completed while the app was in the background.
+  if (document.visibilityState === 'visible' && store.ready) store.refresh().then(() => renderPaywall()).catch(() => {});
+});
+store.init();
+
+// ---------- Updates (sideloaded test builds only) ----------
 
 const RELEASE_API = 'https://api.github.com/repos/JPPotgieter/AirGuitar/releases/tags/android-latest';
 const APK_URL = 'https://github.com/JPPotgieter/AirGuitar/releases/download/android-latest/AirGuitarHero.apk';
 
 // The Android app checks GitHub for a newer test build and offers a one-tap update.
 async function checkForUpdate() {
-  if (!window.Capacitor?.isNativePlatform?.() || !VERSION.code) return;
+  // Play Store builds must only update through Google Play.
+  if (BUILD.channel !== 'test' || !window.Capacitor?.isNativePlatform?.() || !VERSION.code) return;
   try {
     const res = await fetch(RELEASE_API, { cache: 'no-store' });
     if (!res.ok) return;

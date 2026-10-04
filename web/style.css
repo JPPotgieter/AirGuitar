@@ -124,7 +124,7 @@ button {
   font: inherit;
   cursor: pointer;
 }
-#close, #customize2, #intro button {
+#close, #customize2, #restore, #intro button, #paywall button {
   display: block;
   width: 100%;
   padding: 14px;
@@ -271,3 +271,48 @@ button {
 }
 #update #update-close { background: transparent; color: #fff; padding: 8px; }
 #version { margin-left: 8px; }
+
+#pick-instrument button { position: relative; }
+#pick-instrument .lock { display: none; position: absolute; top: 4px; right: 6px; font-style: normal; font-size: 14px; }
+#pick-instrument button.locked .lock { display: block; }
+#pick-instrument button.locked span { opacity: 0.6; }
+
+#paywall {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 3, 15, 0.8);
+  z-index: 8;
+  overflow-y: auto;
+}
+#paywall .card {
+  position: relative;
+  max-width: 400px;
+  width: 100%;
+  padding: 20px 18px 16px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 0%, #4c1d95, #140c2c 70%);
+  border: 2px solid #ffd65a;
+  text-align: center;
+}
+#paywall .big { font-size: 52px; }
+#paywall h2 { margin: 4px 0 8px; font-size: 22px; }
+#paywall p { color: #ddd; margin: 8px 0; }
+#paywall ul { text-align: left; padding-left: 4px; list-style: none; line-height: 1.7; color: #eee; }
+#paywall .primary { background: linear-gradient(90deg, #f43f5e, #f59e0b); }
+#paywall button:disabled { opacity: 0.7; }
+#paywall #paywall-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 40px;
+  margin: 0;
+  padding: 6px;
+  background: transparent;
+  font-size: 18px;
+}
+#paywall .small { font-size: 13px; color: #aaa; }
+#paywall-msg:empty { display: none; }

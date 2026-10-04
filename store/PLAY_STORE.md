@@ -7,7 +7,8 @@ checklist when you're ready to publish.
 
 | Requirement | Status |
 | --- | --- |
-| App bundle (`.aab`) | Built by the **Build Android app** workflow once your upload key is added (step 2) |
+| App bundle (`.aab`) | Built by the **Build Android app** workflow once your upload key is added (step 2), as `AirGuitarHero-GooglePlay.aab` |
+| Free + paid versions | Guitar is free; a one-time in-app purchase (`all_instruments`) unlocks every other instrument (step 4) |
 | Target API level | Android 16 (API 36), which meets Play's current requirement |
 | Increasing version code | Automatic: each build uses the workflow run number |
 | App icon, 512 × 512 | `store/icon-512.png` |
@@ -53,14 +54,23 @@ Never commit `upload.jks` to the repo. `.gitignore` already blocks it. (The comm
 `android/app/debug.keystore` is only for test APKs, so they install as updates over each other.
 It is not secret and must never be used for Play.)
 
-From the next build, the workflow produces a signed `AirGuitarHero.aab` (upload this to Play)
-and a signed `AirGuitarHero.apk`, both on the **android-latest** release.
+From the next build, the workflow also produces **`AirGuitarHero-GooglePlay.aab`** on the
+**android-latest** release. Upload that file to Play.
+
+There are two builds of the app:
+
+| File | For | Instruments | Updates |
+| --- | --- | --- | --- |
+| `AirGuitarHero.apk` | You, sideloading test builds | All unlocked | In-app "Update" button |
+| `AirGuitarHero-GooglePlay.aab` | Google Play | Guitar free, the rest via purchase | Through Google Play only (Play policy) |
 
 ## 3. Create the app in Play Console
 
 **Create app:** name *Air Guitar Hero*, type *App*, *Free*.
 
 ### Store listing (copy and paste)
+
+**Pricing:** the app is **Free** (with an in-app purchase).
 
 **App name** (30 characters max):
 > Air Guitar Hero
@@ -86,6 +96,8 @@ and a signed `AirGuitarHero.apk`, both on the **android-latest** release.
 > its own look and sound.
 > 🎵 CHORD SETS: Campfire, Rock power chords, Blues and Moody.
 > ✋ LEFT-HANDED MODE: swap your hands.
+> 🆓 FREE TO TRY: guitar is free forever. Unlock drums, trombone and every future instrument with
+> one small purchase. No ads, no subscription.
 > 🔒 PRIVATE: the camera is processed on your phone and never recorded or uploaded.
 > 📴 WORKS OFFLINE: no account, no ads, no internet needed.
 >
@@ -102,16 +114,42 @@ and a signed `AirGuitarHero.apk`, both on the **android-latest** release.
 - **App access:** All functionality is available without special access.
 - **Content rating (IARC):** Category *Entertainment*. Answer "No" to violence, sexuality,
   language, controlled substances, gambling, user interaction/sharing and location sharing.
+  Answer **Yes** to "Does the app allow users to purchase digital goods?".
   The result is usually *Everyone / PEGI 3*.
 - **Target audience:** 13+ is simplest. If you choose ages under 13, the app also has to meet
   the Families policy requirements.
 - **Data safety:**
   - Does your app collect or share any of the required user data types? **No**
+  - (Payments are handled entirely by Google Play Billing; the app never sees card details.)
   - (The camera is used on the device only. Data processed only on the device doesn't count
     as "collected".)
 - **Government app / financial features / health:** No.
 
-## 4. Upload and test
+## 4. Set up the "unlock all instruments" purchase
+
+1. Upload an `.aab` to a testing track first. Play only lets you create products once the
+   app's first bundle is uploaded.
+2. **Monetize → Products → In-app products → Create product**
+   - **Product ID:** `all_instruments` (must match exactly, and can't be changed later)
+   - **Name:** Unlock all instruments
+   - **Description:** Drums, trombone and every instrument added in future. One-time purchase.
+   - **Price:** $4.99 (or $5.00). Play converts it to local prices, and the app shows the local
+     price automatically.
+   - **Activate** the product.
+3. **Test it without paying:** **Settings → License testing**, add your Google account (and
+   your testers'). License testers see "Test card, always approves" at checkout and are never
+   charged. Purchases only work in a copy installed **from Google Play** (any testing track),
+   not in the sideloaded test APK.
+4. To try it again after a test purchase, refund it under **Order management**. The app
+   re-locks the instruments the next time it starts.
+
+How it works in the app: tapping a locked instrument (🔒) opens the unlock screen, with the
+price, **Watch a demo first** and **Restore purchase**. The purchase is checked with Google
+Play every time the app starts, so it carries over to a new phone signed in to the same
+Google account, and refunds re-lock it. The app acknowledges purchases automatically.
+Google refunds purchases that aren't acknowledged within 3 days.
+
+## 5. Upload and test
 
 1. **Testing → Closed testing → Create track**, add your testers' emails, and upload
    `AirGuitarHero.aab` from the android-latest release.

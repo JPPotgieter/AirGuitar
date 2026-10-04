@@ -32,43 +32,43 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Build web app and copy it into the Android project
-        run: |
-          npm ci
-          npm run build
-          npx cap sync android
+      - run: npm ci
 
+      # 1. Test APK: everything unlocked, signed with the shared test key so it installs as an
+      #    update over earlier test builds. This is what you sideload from the release page.
+      - name: Build test APK
+        run: |
+          CHANNEL=test npm run build
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+          mkdir -p ../dist
+          cp app/build/outputs/apk/debug/app-debug.apk ../dist/AirGuitarHero.apk
+
+      # 2. Google Play bundle: guitar free, other instruments via in-app purchase. Only built once
+      #    your upload key is configured (see store/PLAY_STORE.md).
       - name: Decode upload key (if configured)
         if: env.KEYSTORE_BASE64 != ''
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
-      - name: Build signed release APK + AAB (for Google Play)
+      - name: Build Google Play bundle (AAB)
         if: env.KEYSTORE_BASE64 != ''
-        working-directory: android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease bundleRelease
-          mkdir -p ../dist
-          cp app/build/outputs/apk/release/app-release.apk ../dist/AirGuitarHero.apk
-          cp app/build/outputs/bundle/release/app-release.aab ../dist/AirGuitarHero.aab
-
-      - name: Build test APK (debug-signed)
-        if: env.KEYSTORE_BASE64 == ''
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
-          mkdir -p ../dist
-          cp app/build/outputs/apk/debug/app-debug.apk ../dist/AirGuitarHero.apk
+          CHANNEL=play npm run build
+          npx cap sync android
+          cd android
+          ./gradlew --no-daemon bundleRelease
+          cp app/build/outputs/bundle/release/app-release.aab ../dist/AirGuitarHero-GooglePlay.aab
 
       - name: Also package as a zip (some phone browsers stall on raw .apk downloads)
-        run: cd dist && zip -9 AirGuitarHero.zip AirGuitarHero.*
+        run: cd dist && zip -9 AirGuitarHero.zip AirGuitarHero.apk
 
       - uses: actions/upload-artifact@v4
         with:
