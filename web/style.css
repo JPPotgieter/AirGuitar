@@ -10,7 +10,7 @@ html, body {
   user-select: none;
   -webkit-user-select: none;
 }
-canvas { position: fixed; inset: 0; display: block; }
+#stage { position: fixed; inset: 0; display: block; }
 .hidden { display: none !important; }
 
 #camera {
@@ -124,7 +124,7 @@ button {
   font: inherit;
   cursor: pointer;
 }
-#close, #intro button {
+#close, #customize2, #intro button {
   display: block;
   width: 100%;
   padding: 14px;
@@ -157,3 +157,71 @@ button {
 #intro .small { font-size: 13px; color: #aaa; }
 #error { color: #fca5a5 !important; }
 #intro a { color: #aaa; }
+
+#custom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 52vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+  border-radius: 20px 20px 0 0;
+  background: rgba(20, 12, 44, 0.97);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 4;
+}
+#custom .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+#custom .tabs button,
+#custom .custom-actions button {
+  flex: 1;
+  padding: 10px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+#custom .tabs button.on { background: #ffd65a; color: #1a0f3a; }
+#custom-body { flex: 1; overflow-y: auto; min-height: 0; }
+#custom .custom-actions { display: flex; gap: 8px; margin-top: 10px; }
+#custom .custom-actions .primary { background: linear-gradient(90deg, #f43f5e, #f59e0b); }
+.opt { margin-bottom: 12px; }
+.opt-label { font-size: 13px; color: #bbb; margin-bottom: 6px; }
+.opt-values { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+}
+.swatch.on { border-color: #ffd65a; transform: scale(1.12); }
+.chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 14px;
+}
+.chip.on { border-color: #ffd65a; background: rgba(255, 214, 90, 0.2); }
+.guitars { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.guitar-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.guitar-card canvas { width: 100%; height: auto; }
+.guitar-card small { font-weight: 400; color: #aaa; font-size: 12px; }
+.guitar-card.on { border-color: #ffd65a; background: rgba(255, 214, 90, 0.15); }

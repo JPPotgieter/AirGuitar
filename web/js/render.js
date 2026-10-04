@@ -8,8 +8,7 @@ export const GEO = {
   head: 3.15,
 };
 
-const SKIN = '#f1c27d';
-const SKIN_DARK = '#c99a5b';
+import { DEFAULT_LOOK } from './looks.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -18,7 +17,7 @@ export class Renderer {
     this.particles = [];
     this.flash = 0;
     this.stringEnergy = new Array(6).fill(0);
-    this.look = { shirt: '#1f2937', pants: '#111827', hair: '#2b1b12', accent: '#f43f5e' };
+    this.look = { ...DEFAULT_LOOK };
   }
 
   resize() {
@@ -125,6 +124,7 @@ export class Renderer {
     const b = scene.body;
     const S = b.S;
     const look = this.look;
+    const skinDark = shade(look.skin, -0.18);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -140,7 +140,7 @@ export class Renderer {
     }
 
     // Neck + torso
-    limb(ctx, [b.neckBase, b.head.c], S * 0.2, SKIN_DARK);
+    limb(ctx, [b.neckBase, b.head.c], S * 0.2, skinDark);
     const sh = b.shoulder;
     const hp = b.hip;
     const out = (p, q, k) => ({ x: p.x + (p.x - q.x) * k, y: p.y + (p.y - q.y) * k });
@@ -170,7 +170,7 @@ export class Renderer {
     const g = scene.guitar;
     const strapEnd = g.at(GEO.neckStart, -0.15);
     const strapStart = g.at(GEO.bridge - 0.05, 0);
-    ctx.strokeStyle = '#3b0d0d';
+    ctx.strokeStyle = scene.guitarStyle.strap;
     ctx.lineWidth = S * 0.09;
     ctx.beginPath();
     ctx.moveTo(strapStart.x, strapStart.y);
@@ -182,10 +182,10 @@ export class Renderer {
     // Arms go over the guitar so hands sit on the strings.
     for (const side of ['L', 'R']) {
       limb(ctx, [b.shoulder[side], b.elbow[side]], S * 0.27, look.shirt);
-      limb(ctx, [b.elbow[side], b.wrist[side]], S * 0.2, SKIN);
+      limb(ctx, [b.elbow[side], b.wrist[side]], S * 0.2, look.skin);
       const hand = b.hand[side];
-      ctx.fillStyle = SKIN;
-      ctx.strokeStyle = SKIN_DARK;
+      ctx.fillStyle = look.skin;
+      ctx.strokeStyle = skinDark;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(hand.x, hand.y, S * 0.12, 0, Math.PI * 2);
@@ -209,103 +209,240 @@ export class Renderer {
     ctx.save();
     ctx.translate(head.c.x, head.c.y);
     ctx.rotate(head.angle);
-    // Spiky hair behind
-    ctx.fillStyle = look.hair;
-    ctx.beginPath();
-    for (let i = 0; i <= 9; i++) {
-      const a = Math.PI + (i / 9) * Math.PI;
-      const rr = i % 2 ? r * 1.45 : r * 1.05;
-      const x = Math.cos(a) * rr;
-      const y = Math.sin(a) * rr - r * 0.1;
-      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-    }
-    ctx.lineTo(r * 1.05, r * 0.6);
-    ctx.lineTo(-r * 1.05, r * 0.6);
-    ctx.closePath();
-    ctx.fill();
+    this.drawHairBack(r);
     // Face
-    ctx.fillStyle = SKIN;
+    ctx.fillStyle = look.skin;
     ctx.beginPath();
     ctx.ellipse(0, 0, r * 0.88, r, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Fringe
-    ctx.fillStyle = look.hair;
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.1, -r * 0.72, r * 0.85, r * 0.38, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    // Sunglasses
-    ctx.fillStyle = '#0b0b0b';
-    for (const sx of [-1, 1]) {
-      ctx.beginPath();
-      roundRect(ctx, sx * r * 0.42 - r * 0.32, -r * 0.2, r * 0.64, r * 0.36, r * 0.12);
-      ctx.fill();
-    }
-    ctx.fillRect(-r * 0.12, -r * 0.14, r * 0.24, r * 0.06);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillRect(-r * 0.66, -r * 0.14, r * 0.14, r * 0.06);
-    ctx.fillRect(r * 0.18, -r * 0.14, r * 0.14, r * 0.06);
+    this.drawHairFront(r);
+    this.drawEyes(r);
     // Mouth: opens when you rock out
     const open = Math.min(1, mouth);
     ctx.fillStyle = '#5b1a1a';
     ctx.beginPath();
     ctx.ellipse(0, r * 0.48, r * 0.3, r * (0.06 + open * 0.2), 0, 0, Math.PI * 2);
     ctx.fill();
+    this.drawHat(r);
     ctx.restore();
+  }
+
+  // Head-local drawing helpers: origin at the face centre, r = head radius.
+  drawHairBack(r) {
+    const { ctx, look } = this;
+    ctx.fillStyle = look.hairColor;
+    ctx.beginPath();
+    switch (look.hairStyle) {
+      case 'spiky':
+        for (let i = 0; i <= 9; i++) {
+          const a = Math.PI + (i / 9) * Math.PI;
+          const rr = i % 2 ? r * 1.45 : r * 1.05;
+          const x = Math.cos(a) * rr;
+          const y = Math.sin(a) * rr - r * 0.1;
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.lineTo(r * 1.05, r * 0.6);
+        ctx.lineTo(-r * 1.05, r * 0.6);
+        break;
+      case 'long':
+        roundRect(ctx, -r * 1.08, -r * 1.12, r * 2.16, r * 2.75, r * 0.9);
+        break;
+      case 'mohawk':
+        for (let i = 0; i <= 6; i++) {
+          const a = Math.PI * (1.3 + (i / 6) * 0.4);
+          const rr = i % 2 ? r * 1.75 : r * 0.95;
+          const x = Math.cos(a) * rr;
+          const y = Math.sin(a) * rr;
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        break;
+      case 'afro':
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2;
+          ctx.moveTo(Math.cos(a) * r * 1.15 + r * 0.42, Math.sin(a) * r * 1.15 - r * 0.3);
+          ctx.arc(Math.cos(a) * r * 1.15, Math.sin(a) * r * 1.15 - r * 0.3, r * 0.42, 0, Math.PI * 2);
+        }
+        ctx.moveTo(r * 1.3, -r * 0.3);
+        ctx.arc(0, -r * 0.3, r * 1.3, 0, Math.PI * 2);
+        break;
+      default:
+        return;
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawHairFront(r) {
+    const { ctx, look } = this;
+    ctx.fillStyle = look.hairColor;
+    ctx.beginPath();
+    switch (look.hairStyle) {
+      case 'spiky':
+        ctx.ellipse(-r * 0.1, -r * 0.72, r * 0.85, r * 0.38, -0.2, 0, Math.PI * 2);
+        break;
+      case 'long':
+        ctx.ellipse(r * 0.15, -r * 0.75, r * 0.85, r * 0.4, 0.25, 0, Math.PI * 2);
+        break;
+      case 'afro':
+        ctx.ellipse(0, -r * 0.82, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+        break;
+      case 'buzz':
+        ctx.ellipse(0, -r * 0.05, r * 0.9, r * 1.02, 0, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.quadraticCurveTo(0, -r * 0.55, -r * 0.88, -r * 0.3);
+        break;
+      case 'bald':
+        // A little shine
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.ellipse(-r * 0.35, -r * 0.65, r * 0.18, r * 0.08, -0.5, 0, Math.PI * 2);
+        break;
+      default:
+        return;
+    }
+    ctx.fill();
+  }
+
+  drawEyes(r) {
+    const { ctx, look } = this;
+    const eye = (x) => {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.ellipse(x, -r * 0.05, r * 0.16, r * 0.13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1f1308';
+      ctx.beginPath();
+      ctx.arc(x, -r * 0.04, r * 0.075, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    switch (look.eyewear) {
+      case 'shades':
+        ctx.fillStyle = '#0b0b0b';
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          roundRect(ctx, sx * r * 0.42 - r * 0.32, -r * 0.2, r * 0.64, r * 0.36, r * 0.12);
+          ctx.fill();
+        }
+        ctx.fillRect(-r * 0.12, -r * 0.14, r * 0.24, r * 0.06);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillRect(-r * 0.66, -r * 0.14, r * 0.14, r * 0.06);
+        ctx.fillRect(r * 0.18, -r * 0.14, r * 0.14, r * 0.06);
+        break;
+      case 'round':
+        eye(-r * 0.38);
+        eye(r * 0.38);
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = r * 0.07;
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          ctx.arc(sx * r * 0.38, -r * 0.05, r * 0.27, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.11, -r * 0.08);
+        ctx.quadraticCurveTo(0, -r * 0.16, r * 0.11, -r * 0.08);
+        ctx.stroke();
+        break;
+      case 'star':
+        ctx.fillStyle = look.accent;
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          starPath(ctx, sx * r * 0.4, -r * 0.05, r * 0.36, r * 0.17, 5);
+          ctx.fill();
+        }
+        ctx.fillRect(-r * 0.12, -r * 0.1, r * 0.24, r * 0.06);
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          ctx.arc(sx * r * 0.4, -r * 0.04, r * 0.11, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      default:
+        eye(-r * 0.36);
+        eye(r * 0.36);
+        // Eyebrows
+        ctx.strokeStyle = look.hairStyle === 'bald' ? '#3b2a1a' : look.hairColor;
+        ctx.lineWidth = r * 0.08;
+        ctx.lineCap = 'round';
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          ctx.moveTo(sx * r * 0.52, -r * 0.27);
+          ctx.lineTo(sx * r * 0.2, -r * 0.33);
+          ctx.stroke();
+        }
+    }
+  }
+
+  drawHat(r) {
+    const { ctx, look } = this;
+    ctx.fillStyle = look.accent;
+    switch (look.hat) {
+      case 'cap':
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.5, r * 0.97, r * 0.68, 0, Math.PI, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = shade(look.accent, -0.25);
+        ctx.beginPath();
+        ctx.ellipse(r * 0.55, -r * 0.5, r * 0.75, r * 0.13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'cowboy': {
+        const c = '#8b5a2b';
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        roundRect(ctx, -r * 0.72, -r * 1.55, r * 1.44, r * 1.0, r * 0.35);
+        ctx.fill();
+        ctx.fillStyle = look.accent;
+        ctx.fillRect(-r * 0.72, -r * 0.82, r * 1.44, r * 0.16);
+        ctx.fillStyle = shade(c, -0.15);
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.62, r * 1.75, r * 0.24, 0, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case 'beanie':
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.42, r * 0.98, r * 0.85, 0, Math.PI, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = shade(look.accent, -0.25);
+        ctx.beginPath();
+        roundRect(ctx, -r * 1.0, -r * 0.62, r * 2.0, r * 0.3, r * 0.12);
+        ctx.fill();
+        ctx.fillStyle = '#f9fafb';
+        ctx.beginPath();
+        ctx.arc(0, -r * 1.3, r * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+    }
   }
 
   drawGuitar(scene) {
     const { ctx } = this;
     const g = scene.guitar;
     const S = g.S;
-    const rock = scene.tone === 'rock';
+    const gs = scene.guitarStyle;
     ctx.save();
     ctx.translate(g.origin.x, g.origin.y);
     ctx.rotate(Math.atan2(g.dir.y, g.dir.x));
     // Local frame: +x along the neck, +y towards the floor-side of the strings.
     ctx.scale(S, S * g.flip);
-    ctx.lineWidth = 0.02;
 
     // Body
-    const grad = ctx.createRadialGradient(-0.15, 0, 0.05, -0.15, 0, 0.75);
-    if (rock) {
-      grad.addColorStop(0, '#ff3b3b');
-      grad.addColorStop(1, '#5a0000');
-    } else {
-      grad.addColorStop(0, '#ffcf6b');
-      grad.addColorStop(0.6, '#d9731f');
-      grad.addColorStop(1, '#4a1d06');
-    }
+    const grad = ctx.createRadialGradient(-0.15, 0, 0.05, -0.15, 0, 0.8);
+    grad.addColorStop(0, gs.body[0]);
+    grad.addColorStop(0.6, gs.body[1]);
+    grad.addColorStop(1, gs.body[2]);
     ctx.fillStyle = grad;
-    ctx.strokeStyle = rock ? '#ffffff' : '#2a1204';
-    ctx.lineWidth = 0.025;
+    ctx.strokeStyle = gs.outline;
+    // Stroke first, then fill over it, so only the outer edge of the outline shows.
+    ctx.lineWidth = 0.05;
     ctx.beginPath();
-    ctx.ellipse(-0.38, 0, 0.6, 0.6, 0, 0, Math.PI * 2);
-    ctx.moveTo(0.64, 0);
-    ctx.ellipse(0.22, 0, 0.42, 0.46, 0, 0, Math.PI * 2);
+    bodyPath(ctx, gs.shape);
+    ctx.stroke();
     ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-0.38, 0, 0.6, 0.6, 0, Math.PI * 0.25, Math.PI * 1.75);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(0.22, 0, 0.42, 0.46, 0, -Math.PI * 0.62, Math.PI * 0.62);
-    ctx.stroke();
 
-    if (rock) {
-      // Pickups + pickguard
-      ctx.fillStyle = '#111';
-      ctx.beginPath();
-      ctx.moveTo(-0.6, 0.12);
-      ctx.quadraticCurveTo(-0.1, 0.5, 0.35, 0.12);
-      ctx.lineTo(0.35, 0.12);
-      ctx.closePath();
-      ctx.fill();
-      for (const u of [-0.32, 0.12]) {
-        ctx.fillStyle = '#1b1b1b';
-        ctx.fillRect(u - 0.06, -0.14, 0.12, 0.28);
-        ctx.fillStyle = '#9ca3af';
-        for (let i = 0; i < 6; i++) ctx.fillRect(u - 0.012, -0.11 + i * 0.044, 0.024, 0.02);
-      }
-    } else {
+    if (gs.shape === 'acoustic') {
       // Sound hole with rosette
       ctx.fillStyle = '#120700';
       ctx.beginPath();
@@ -316,6 +453,30 @@ export class Renderer {
       ctx.beginPath();
       ctx.arc(0, 0, 0.21, 0, Math.PI * 2);
       ctx.stroke();
+    } else {
+      // Pickguard, pickups and knobs
+      ctx.save();
+      ctx.fillStyle = gs.guard;
+      ctx.globalAlpha *= 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-0.5, 0.1);
+      ctx.quadraticCurveTo(-0.15, 0.42, 0.3, 0.12);
+      ctx.lineTo(0.3, 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      for (const u of [-0.3, 0.1]) {
+        ctx.fillStyle = '#1b1b1b';
+        ctx.fillRect(u - 0.06, -0.14, 0.12, 0.28);
+        ctx.fillStyle = '#9ca3af';
+        for (let i = 0; i < 6; i++) ctx.fillRect(u - 0.012, -0.11 + i * 0.044, 0.024, 0.02);
+      }
+      ctx.fillStyle = '#e5e7eb';
+      for (const [u, v] of [[-0.55, 0.28], [-0.4, 0.34]]) {
+        ctx.beginPath();
+        ctx.arc(u, v, 0.04, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     // Bridge
     ctx.fillStyle = '#1a0b02';
@@ -349,7 +510,7 @@ export class Renderer {
       ctx.stroke();
     }
     // Headstock + tuners
-    ctx.fillStyle = rock ? '#111' : '#3a1f08';
+    ctx.fillStyle = gs.head;
     ctx.beginPath();
     ctx.moveTo(GEO.nut, -nw / 2);
     ctx.lineTo(GEO.head, -0.16);
@@ -432,4 +593,117 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+function starPath(ctx, cx, cy, outer, inner, points) {
+  for (let i = 0; i <= points * 2; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / points;
+    const rr = i % 2 ? inner : outer;
+    const x = cx + Math.cos(a) * rr;
+    const y = cy + Math.sin(a) * rr;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+
+// Guitar body outlines in guitar-local units (sound hole / strum point at 0,0; neck towards +x).
+function bodyPath(ctx, shape) {
+  switch (shape) {
+    case 'strat':
+      ctx.moveTo(0.5, -0.12);
+      ctx.bezierCurveTo(0.62, -0.2, 0.62, -0.42, 0.42, -0.42);
+      ctx.bezierCurveTo(0.25, -0.42, 0.2, -0.3, 0.05, -0.36);
+      ctx.bezierCurveTo(-0.15, -0.6, -0.95, -0.62, -0.95, 0);
+      ctx.bezierCurveTo(-0.95, 0.62, -0.15, 0.6, 0.05, 0.36);
+      ctx.bezierCurveTo(0.2, 0.3, 0.3, 0.38, 0.4, 0.36);
+      ctx.bezierCurveTo(0.55, 0.33, 0.55, 0.18, 0.5, 0.12);
+      ctx.closePath();
+      break;
+    case 'lespaul':
+      ctx.moveTo(0.45, -0.14);
+      ctx.bezierCurveTo(0.5, -0.4, 0.2, -0.46, 0.05, -0.36);
+      ctx.bezierCurveTo(-0.15, -0.6, -0.95, -0.6, -0.95, 0);
+      ctx.bezierCurveTo(-0.95, 0.6, -0.15, 0.6, 0.05, 0.38);
+      ctx.bezierCurveTo(0.15, 0.3, 0.2, 0.2, 0.28, 0.14);
+      ctx.lineTo(0.45, 0.14);
+      ctx.closePath();
+      break;
+    case 'flyingv':
+      ctx.moveTo(0.5, -0.12);
+      ctx.lineTo(-1.0, -0.62);
+      ctx.lineTo(-1.08, -0.42);
+      ctx.lineTo(-0.45, 0);
+      ctx.lineTo(-1.08, 0.42);
+      ctx.lineTo(-1.0, 0.62);
+      ctx.lineTo(0.5, 0.12);
+      ctx.closePath();
+      break;
+    case 'star':
+      starPath(ctx, -0.3, 0, 0.78, 0.36, 5);
+      break;
+    default: // acoustic: two bouts and a waist
+      ctx.ellipse(-0.38, 0, 0.6, 0.6, 0, 0, Math.PI * 2);
+      ctx.moveTo(0.64, 0);
+      ctx.ellipse(0.22, 0, 0.42, 0.46, 0, 0, Math.PI * 2);
+  }
+}
+
+// Lighten (amt > 0) or darken (amt < 0) a #rrggbb colour.
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v) => Math.max(0, Math.min(255, Math.round(amt < 0 ? v * (1 + amt) : v + (255 - v) * amt)));
+  const r = ch(n >> 16), g = ch((n >> 8) & 255), b = ch(n & 255);
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+// Small side-on picture of a guitar for the guitar picker.
+export function drawGuitarThumb(canvas, gs) {
+  const ctx = canvas.getContext('2d');
+  const k = canvas.height / 1.5;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width * 0.3, canvas.height / 2);
+  ctx.rotate(-0.12);
+  ctx.scale(k, k);
+  ctx.fillStyle = '#5b3412';
+  ctx.fillRect(0.4, -0.08, 1.75, 0.16);
+  ctx.fillStyle = gs.head;
+  ctx.beginPath();
+  ctx.moveTo(2.15, -0.08);
+  ctx.lineTo(2.5, -0.14);
+  ctx.lineTo(2.5, 0.14);
+  ctx.lineTo(2.15, 0.08);
+  ctx.closePath();
+  ctx.fill();
+  const grad = ctx.createRadialGradient(-0.15, 0, 0.05, -0.15, 0, 0.8);
+  grad.addColorStop(0, gs.body[0]);
+  grad.addColorStop(0.6, gs.body[1]);
+  grad.addColorStop(1, gs.body[2]);
+  ctx.fillStyle = grad;
+  ctx.strokeStyle = gs.outline;
+  ctx.lineWidth = 0.06;
+  ctx.beginPath();
+  bodyPath(ctx, gs.shape);
+  ctx.stroke();
+  ctx.fill();
+  if (gs.shape === 'acoustic') {
+    ctx.fillStyle = '#120700';
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.16, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = '#1b1b1b';
+    ctx.fillRect(-0.36, -0.13, 0.12, 0.26);
+    ctx.fillRect(0.04, -0.13, 0.12, 0.26);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 0.012;
+  for (let i = 0; i < 6; i++) {
+    const v = -0.06 + i * 0.024;
+    ctx.beginPath();
+    ctx.moveTo(-0.55, v * 1.6);
+    ctx.lineTo(2.15, v);
+    ctx.stroke();
+  }
+  ctx.restore();
 }

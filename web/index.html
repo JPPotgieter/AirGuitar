@@ -40,7 +40,20 @@
     </label>
     <label class="check"><input type="checkbox" id="lefty" /> Left-handed</label>
     <label class="check"><input type="checkbox" id="showcam" /> Show camera preview</label>
+    <button id="customize2">🎨 Customise avatar &amp; guitar</button>
     <button id="close">Done</button>
+  </div>
+
+  <div id="custom" class="hidden">
+    <div class="tabs">
+      <button data-tab="avatar" class="on">🧑‍🎤 Avatar</button>
+      <button data-tab="guitar">🎸 Guitar</button>
+    </div>
+    <div id="custom-body"></div>
+    <div class="custom-actions">
+      <button id="shuffle">🎲 Surprise me</button>
+      <button id="custom-done" class="primary">Done</button>
+    </div>
   </div>
 
   <div id="intro">
@@ -54,6 +67,7 @@
         <li><b>Strum</b> across the guitar body with your other hand.</li>
       </ol>
       <button id="play" class="primary">Start playing</button>
+      <button id="customize">🎨 Create your rock star</button>
       <button id="demo">Watch demo</button>
       <p id="error"></p>
       <p class="small">Video stays on your phone — nothing is uploaded. Turn your sound on 🔊</p>

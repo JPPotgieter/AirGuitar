@@ -8,6 +8,9 @@ every move you make, and your imaginary guitar makes real music:
 - **Strumming hand:** sweep it across the guitar body. Down-strums and up-strums sound
   different, and harder strums play louder.
 - **Tap the screen** to strum too, which is handy for checking your sound is on.
+- **Create your rock star:** choose skin, hair style and colour, glasses, hat and outfit, then
+  pick from five guitars (Acoustic, Classic Red, Gold Top, Flying V, Neon Star). Each guitar has
+  its own shape and sound.
 
 Everything runs in the browser on your phone. The video is never uploaded.
 
@@ -59,6 +62,7 @@ The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
 | Drawing the stage, avatar, guitar and music notes on a canvas | `web/js/render.js` |
 | Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `web/js/audio.js` |
 | Chord shapes and chord sets | `web/js/chords.js` |
+| Avatar options and the guitar collection | `web/js/looks.js` |
 | Build step: copies `web/` to `www/` and bundles the MediaPipe runtime and model so the app works offline | `scripts/build-web.mjs` |
 | Android app ([Capacitor](https://capacitorjs.com) wrapper around `www/`) | `android/` |
 | CI: Android APK/AAB build, and GitHub Pages deploy | `.github/workflows/` |

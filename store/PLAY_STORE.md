@@ -75,7 +75,9 @@ and a signed `AirGuitarHero.apk`, both on the **android-latest** release.
 > 🎸 SLIDE TO CHANGE CHORDS: move your fretting hand up and down the neck to switch chords.
 > 🎶 STRUM TO PLAY: sweep your other hand across the guitar. Strum harder to play louder,
 > and strum up or down for a different sound.
-> 🤘 ROCK OUT: switch between a warm acoustic guitar and a distorted rock guitar.
+> 🎨 CREATE YOUR ROCK STAR: pick your skin, hair, shades, hat and outfit.
+> 🤘 CHOOSE YOUR GUITAR: Acoustic, Classic Red, Gold Top, Flying V or Neon Star, each with
+> its own look and sound.
 > 🎵 CHORD SETS: Campfire, Rock power chords, Blues and Moody.
 > ✋ LEFT-HANDED MODE: swap your hands.
 > 🔒 PRIVATE: the camera is processed on your phone and never recorded or uploaded.

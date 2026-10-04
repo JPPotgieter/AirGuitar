@@ -1,7 +1,8 @@
 import { PRESETS } from './chords.js';
 import { GuitarAudio } from './audio.js';
 import { PoseTracker, DemoTracker } from './tracker.js';
-import { Renderer, GEO } from './render.js';
+import { Renderer, GEO, drawGuitarThumb } from './render.js';
+import { AVATAR_OPTIONS, DEFAULT_LOOK, GUITARS, randomLook } from './looks.js';
 
 // MediaPipe pose landmark indices.
 const LM = {
@@ -19,6 +20,8 @@ const renderer = new Renderer($('stage'));
 const video = $('camera');
 
 let tracker = null;
+let previewTracker = null; // demo performer shown while customising from the start screen
+let customFromIntro = false;
 let smooth = null; // smoothed landmarks for drawing
 let lastSeen = 0;
 let body = null;
@@ -32,12 +35,15 @@ let lastFrame = performance.now();
 const stats = { frames: 0, poses: 0 };
 
 function loadSettings() {
-  const d = { preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true };
+  const d = { preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
+  let saved = {};
   try {
-    return { ...d, ...JSON.parse(localStorage.getItem('airguitar') || '{}') };
-  } catch {
-    return d;
-  }
+    saved = JSON.parse(localStorage.getItem('airguitar') || '{}');
+  } catch {}
+  const s = { ...d, ...saved };
+  s.look = { ...DEFAULT_LOOK, ...(saved.look || {}) };
+  if (!GUITARS[s.guitar]) s.guitar = d.guitar;
+  return s;
 }
 function saveSettings() {
   try {
@@ -216,7 +222,11 @@ function updateView(b, g, dt) {
     y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y + S * 0.1);
   }
   const W = renderer.w, H = renderer.h;
-  const top = 84, bottom = 76, side = 10;
+  const custom = $('custom');
+  const customising = !custom.classList.contains('hidden');
+  const top = customising ? 16 : 84;
+  const bottom = customising ? custom.offsetHeight + 8 : 76;
+  const side = 10;
   const k = Math.min(2.5, (W - side * 2) / (x1 - x0), (H - top - bottom) / (y1 - y0));
   // Centre horizontally, rest the feet just above the chord strip.
   const tx = W / 2 - ((x0 + x1) / 2) * k;
@@ -261,6 +271,7 @@ function applySettings() {
   video.classList.toggle('hidden', !settings.showCam || !(tracker instanceof PoseTracker));
   audio.setTone(settings.tone);
   audio.prepare(chords());
+  renderer.look = settings.look;
   buildStrip();
   saveSettings();
 }
@@ -277,10 +288,11 @@ function loop(now) {
   lastFrame = now;
   mouth *= Math.exp(-dt * 4);
 
-  if (tracker) {
+  const active = tracker || previewTracker;
+  if (active) {
     let raw;
     try {
-      raw = tracker.detect(now);
+      raw = active.detect(now);
     } catch (e) {
       console.error(e);
     }
@@ -288,7 +300,7 @@ function loop(now) {
     if (raw) {
       stats.poses++;
       lastSeen = now;
-      const aspect = tracker.aspect;
+      const aspect = active.aspect;
       body = buildBody(smoothLandmarks(raw), aspect);
       guitar = buildGuitar(body, dt);
       updateZone(guitar, body);
@@ -310,6 +322,7 @@ function loop(now) {
     zone,
     chords: chords(),
     tone: settings.tone,
+    guitarStyle: GUITARS[settings.guitar],
     mouth,
     view: view || { k: 1, x: 0, y: 0 },
   });
@@ -348,6 +361,120 @@ async function start(demo) {
   applySettings();
 }
 
+// ---------- Customise avatar & guitar ----------
+
+let customTab = 'avatar';
+
+function openCustomizer() {
+  customFromIntro = !$('intro').classList.contains('hidden');
+  $('intro').classList.add('hidden');
+  $('panel').classList.add('hidden');
+  $('hud').classList.add('hidden');
+  if (!tracker) {
+    previewTracker = new DemoTracker();
+    neckAngle = null;
+  }
+  $('custom').classList.remove('hidden');
+  renderCustomizer();
+}
+
+function closeCustomizer() {
+  $('custom').classList.add('hidden');
+  if (customFromIntro) {
+    previewTracker = null;
+    body = null;
+    $('intro').classList.remove('hidden');
+  } else {
+    $('hud').classList.remove('hidden');
+  }
+}
+
+function renderCustomizer() {
+  for (const t of document.querySelectorAll('#custom .tabs button')) {
+    t.classList.toggle('on', t.dataset.tab === customTab);
+  }
+  const box = $('custom-body');
+  box.innerHTML = '';
+  if (customTab === 'avatar') {
+    for (const [key, opt] of Object.entries(AVATAR_OPTIONS)) {
+      const row = document.createElement('div');
+      row.className = 'opt';
+      const label = document.createElement('div');
+      label.className = 'opt-label';
+      label.textContent = opt.label;
+      const vals = document.createElement('div');
+      vals.className = 'opt-values';
+      for (const v of opt.values) {
+        const b = document.createElement('button');
+        b.className = opt.type === 'color' ? 'swatch' : 'chip';
+        if (opt.type === 'color') {
+          b.style.background = v;
+          b.setAttribute('aria-label', `${opt.label} ${v}`);
+        } else {
+          b.textContent = opt.names[v];
+        }
+        b.classList.toggle('on', settings.look[key] === v);
+        b.addEventListener('click', () => {
+          settings.look[key] = v;
+          applySettings();
+          renderCustomizer();
+        });
+        vals.appendChild(b);
+      }
+      row.append(label, vals);
+      box.appendChild(row);
+    }
+  } else {
+    const grid = document.createElement('div');
+    grid.className = 'guitars';
+    for (const [key, gs] of Object.entries(GUITARS)) {
+      const b = document.createElement('button');
+      b.className = 'guitar-card';
+      b.classList.toggle('on', settings.guitar === key);
+      const c = document.createElement('canvas');
+      c.width = 240;
+      c.height = 110;
+      drawGuitarThumb(c, gs);
+      const name = document.createElement('div');
+      name.textContent = `${gs.emoji} ${gs.name}`;
+      const tone = document.createElement('small');
+      tone.textContent = gs.tone === 'rock' ? 'Electric · distortion' : 'Acoustic sound';
+      b.append(c, name, tone);
+      b.addEventListener('click', () => {
+        settings.guitar = key;
+        settings.tone = gs.tone;
+        applySettings();
+        renderCustomizer();
+        // Let them hear it straight away if sound is already on.
+        if (guitar) playStrum('down', 0.7, guitar.at(0, 0));
+      });
+      grid.appendChild(b);
+    }
+    box.appendChild(grid);
+  }
+}
+
+for (const t of document.querySelectorAll('#custom .tabs button')) {
+  t.addEventListener('click', () => {
+    customTab = t.dataset.tab;
+    renderCustomizer();
+  });
+}
+$('shuffle').addEventListener('click', () => {
+  if (customTab === 'avatar') {
+    settings.look = randomLook();
+  } else {
+    const keys = Object.keys(GUITARS);
+    settings.guitar = keys[Math.floor(Math.random() * keys.length)];
+    settings.tone = GUITARS[settings.guitar].tone;
+  }
+  applySettings();
+  renderCustomizer();
+});
+$('custom-done').addEventListener('click', closeCustomizer);
+$('customize').addEventListener('click', openCustomizer);
+$('customize2').addEventListener('click', openCustomizer);
+
 // ---------- Wire up UI ----------
 
 for (const [key, p] of Object.entries(PRESETS)) {
@@ -380,7 +507,7 @@ $('play').addEventListener('click', () => start(false));
 $('demo').addEventListener('click', () => start(true));
 // Tap anywhere on the stage to strum too — handy for checking the sound.
 $('stage').addEventListener('pointerdown', () => {
-  if (tracker && guitar) playStrum('down', 0.6, guitar.at(0, 0));
+  if ((tracker || previewTracker) && guitar) playStrum('down', 0.6, guitar.at(0, 0));
 });
 window.addEventListener('resize', () => renderer.resize());
 document.addEventListener('visibilitychange', () => {
