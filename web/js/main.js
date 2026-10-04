@@ -80,7 +80,7 @@ const HOW = {
 };
 
 function loadSettings() {
-  const d = { instrument: 'guitar', drumSensitivity: 'normal', preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
+  const d = { instrument: 'guitar', drumSensitivity: 'normal', tvMode: false, preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
   let saved = {};
   try {
     saved = JSON.parse(localStorage.getItem('airguitar') || '{}');
@@ -132,8 +132,10 @@ function updateView(b, dt) {
   const W = renderer.w, H = renderer.h;
   const custom = $('custom');
   const customising = !custom.classList.contains('hidden');
-  const top = customising ? 16 : 84;
-  const bottom = customising ? custom.offsetHeight + 8 : 76;
+  // Sideways (TV mode): a slimmer header and strip leave more room for the avatar.
+  const wide = W > H * 1.3;
+  const top = customising ? 16 : wide ? 52 : 84;
+  const bottom = customising ? custom.offsetHeight + 8 : wide ? 46 : 76;
   const side = 10;
   const k = Math.min(2.5, (W - side * 2) / (x1 - x0), (H - top - bottom) / (y1 - y0));
   // Centre horizontally, rest the feet just above the bottom strip.
@@ -341,7 +343,8 @@ function goToMenu() {
 
 // One step back: close whatever is on top, else leave the session. Returns false on the menu.
 function handleBack() {
-  if (isOpen('paywall')) closePaywall();
+  if (isOpen('tv')) $('tv').classList.add('hidden');
+  else if (isOpen('paywall')) closePaywall();
   else if (isOpen('panel')) $('panel').classList.add('hidden');
   else if (isOpen('custom')) closeCustomizer();
   else if (!isOpen('intro')) goToMenu();
@@ -656,6 +659,50 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && store.ready) store.refresh().then(() => renderPaywall()).catch(() => {});
 });
 store.init();
+
+// ---------- Play on TV (Android screen casting) ----------
+
+const isNative = !!window.Capacitor?.isNativePlatform?.();
+const tvCast = isNative ? window.Capacitor.registerPlugin?.('TvCast') : null;
+const orientation = isNative ? window.Capacitor.registerPlugin?.('ScreenOrientation') : null;
+
+// TV mode: lock the app sideways so the mirrored picture fills the TV.
+async function setTvMode(on) {
+  settings.tvMode = on;
+  saveSettings();
+  $('tv-mode').textContent = on ? '✅ TV mode is on (tap to turn off)' : 'Turn on TV mode';
+  $('tv-mode').classList.toggle('on', on);
+  try {
+    if (on) await orientation?.lock({ orientation: 'landscape' });
+    else await orientation?.unlock();
+  } catch (e) {
+    console.warn('Orientation lock failed', e);
+  }
+  view = null; // re-fit the stage to the new shape
+}
+
+function openTv() {
+  $('panel').classList.add('hidden');
+  $('tv-msg').textContent = '';
+  $('tv').classList.remove('hidden');
+}
+
+for (const el of document.querySelectorAll('.native-only')) el.classList.toggle('hidden', !isNative);
+$('tv-open').addEventListener('click', openTv);
+$('tv-open2').addEventListener('click', openTv);
+$('tv-close').addEventListener('click', () => $('tv').classList.add('hidden'));
+$('tv-mode').addEventListener('click', () => setTvMode(!settings.tvMode));
+$('tv-connect').addEventListener('click', async () => {
+  // Casting looks best sideways, so switch TV mode on as we connect.
+  if (!settings.tvMode) await setTvMode(true);
+  try {
+    await tvCast.openCastSettings();
+    $('tv-msg').textContent = 'Pick your TV, then come back to Air Guitar Hero.';
+  } catch {
+    $('tv-msg').textContent = "Your phone didn't open its cast screen. Use the tip below instead.";
+  }
+});
+if (isNative && settings.tvMode) setTvMode(true);
 
 // ---------- Updates (sideloaded test builds only) ----------
 

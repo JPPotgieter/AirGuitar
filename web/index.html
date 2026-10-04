@@ -52,6 +52,7 @@
     <label class="check"><input type="checkbox" id="lefty" /> Left-handed</label>
     <label class="check"><input type="checkbox" id="showcam" /> Show camera preview</label>
     <button id="customize2">🎨 Customise avatar &amp; guitar</button>
+    <button id="tv-open2" class="native-only hidden">📺 Play on TV</button>
     <button id="restore" class="hidden">Restore subscription</button>
     <button id="manage-sub" class="hidden">Manage subscription</button>
     <button id="close">Done</button>
@@ -89,6 +90,26 @@
     </div>
   </div>
 
+  <div id="tv" class="hidden" role="dialog" aria-labelledby="tv-title">
+    <div class="card">
+      <button id="tv-close" aria-label="Close">✕</button>
+      <div class="big">📺</div>
+      <h2 id="tv-title">Play on your TV</h2>
+      <ol>
+        <li><b>Connect to your TV:</b> tap below and pick your Chromecast or smart TV.
+          Your screen and sound will appear on the TV.</li>
+        <li><b>TV mode</b> turns the app sideways so it fills the TV.</li>
+        <li>Stand your phone <b>sideways</b> under the TV, camera facing you, and step back
+          about 2 m so it can see you from the waist up.</li>
+      </ol>
+      <button id="tv-connect" class="primary">Connect to TV</button>
+      <button id="tv-mode">Turn on TV mode</button>
+      <p id="tv-msg" role="status"></p>
+      <p class="small">Can't find it? Swipe down from the top of the screen and tap
+        <b>Cast</b>, <b>Smart View</b> or <b>Screen mirroring</b>.</p>
+    </div>
+  </div>
+
   <div id="update" class="hidden" role="status">
     <span id="update-text"></span>
     <button id="update-go">Update</button>
@@ -104,6 +125,7 @@
       <ol id="how"></ol>
       <button id="play" class="primary">Start playing</button>
       <button id="customize">🎨 Create your rock star</button>
+      <button id="tv-open" class="native-only hidden">📺 Play on TV</button>
       <button id="demo">Watch demo</button>
       <p id="error"></p>
       <p class="small">Video stays on your phone — nothing is uploaded. Turn your sound on 🔊</p>

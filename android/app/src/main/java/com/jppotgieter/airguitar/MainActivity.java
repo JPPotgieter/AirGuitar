@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(TvCastPlugin.class); // app-local plugin: "Play on TV"
         super.onCreate(savedInstanceState);
         // You play standing back from the phone, so never let the screen dim or lock.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

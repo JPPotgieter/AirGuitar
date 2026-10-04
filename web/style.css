@@ -125,7 +125,7 @@ button {
   font: inherit;
   cursor: pointer;
 }
-#close, #customize2, #restore, #manage-sub, #intro button, #paywall button {
+#close, #customize2, #restore, #manage-sub, #tv-open2, #intro button, #paywall button, #tv button {
   display: block;
   width: 100%;
   padding: 14px;
@@ -278,7 +278,8 @@ button {
 #pick-instrument button.locked .lock { display: block; }
 #pick-instrument button.locked span { opacity: 0.6; }
 
-#paywall {
+#paywall,
+#tv {
   position: fixed;
   inset: 0;
   display: flex;
@@ -289,7 +290,8 @@ button {
   z-index: 8;
   overflow-y: auto;
 }
-#paywall .card {
+#paywall .card,
+#tv .card {
   position: relative;
   max-width: 400px;
   width: 100%;
@@ -299,9 +301,27 @@ button {
   border: 2px solid #ffd65a;
   text-align: center;
 }
-#paywall .big { font-size: 52px; }
-#paywall h2 { margin: 4px 0 8px; font-size: 22px; }
-#paywall p { color: #ddd; margin: 8px 0; }
+#paywall .big,
+#tv .big { font-size: 52px; }
+#paywall h2,
+#tv h2 { margin: 4px 0 8px; font-size: 22px; }
+#paywall p,
+#tv p { color: #ddd; margin: 8px 0; }
+#tv ol { text-align: left; padding-left: 22px; line-height: 1.5; color: #eee; }
+#tv .primary { background: linear-gradient(90deg, #f43f5e, #f59e0b); }
+#tv .small { font-size: 13px; color: #aaa; }
+#tv-msg:empty { display: none; }
+#tv #tv-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 40px;
+  margin: 0;
+  padding: 6px;
+  background: transparent;
+  font-size: 18px;
+}
+#tv-mode.on { background: #ffd65a; color: #1a0f3a; }
 #paywall ul { text-align: left; padding-left: 4px; list-style: none; line-height: 1.7; color: #eee; }
 #paywall .primary { background: linear-gradient(90deg, #f43f5e, #f59e0b); }
 #paywall button:disabled { opacity: 0.7; }
@@ -320,3 +340,12 @@ button {
 #paywall-terms:empty { display: none; }
 #gear { left: 64px; }
 #home { font-size: 34px; line-height: 40px; padding: 0 0 4px; }
+
+/* Sideways phone / TV mode: compact header and chord strip. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #chord { font-size: 38px; top: calc(env(safe-area-inset-top) + 6px); }
+  #home, #gear, #camera { top: calc(env(safe-area-inset-top) + 6px); }
+  #strip { bottom: calc(env(safe-area-inset-bottom) + 6px); }
+  #strip div { padding: 5px 8px; font-size: 13px; }
+  #camera { width: 110px; }
+}

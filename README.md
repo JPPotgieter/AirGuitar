@@ -31,6 +31,17 @@ subscribers, unlocks drums, trombone and every instrument added later. Locked in
 Test APKs from GitHub have everything unlocked. See [`store/PLAY_STORE.md`](store/PLAY_STORE.md)
 for setting up the subscription in Play Console.
 
+### 📺 Play on TV
+
+In the Android app, tap **📺 Play on TV**:
+1. **Connect to TV** opens your phone's cast screen. Pick your Chromecast or smart TV, and the
+   stage and sound appear on the TV.
+2. **TV mode** locks the app sideways so it fills the TV.
+3. Stand the phone sideways under the TV, camera facing you, about 2 m back.
+
+It uses Android's built-in screen casting ("Cast", "Smart View" or "Screen mirroring",
+depending on the phone), so it works with any Chromecast or Miracast TV.
+
 ### Everything else
 
 - **Create your rock star:** choose skin, hair style and colour, glasses, hat and outfit, then

@@ -12,7 +12,7 @@ export class GuitarAudio {
   // Must be called from a user gesture (iOS/Safari audio unlock).
   async start() {
     if (this.ctx) {
-      await this.ctx.resume();
+      await resumeQuickly(this.ctx);
       return;
     }
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -72,7 +72,7 @@ export class GuitarAudio {
     comp.connect(master).connect(ctx.destination);
 
     this.setTone(this.tone);
-    await ctx.resume();
+    await resumeQuickly(ctx);
   }
 
   setTone(tone) {
@@ -166,6 +166,15 @@ export class GuitarAudio {
     if (!this.ctx) return;
     for (let s = 0; s < 6; s++) this.damp(s, this.ctx.currentTime);
   }
+}
+
+// Without a user tap, browsers keep audio suspended and resume() never settles. Don't let that
+// block the app: carry on after a moment; the next tap anywhere starts the sound.
+function resumeQuickly(ctx) {
+  if (ctx.state === 'running') return Promise.resolve();
+  const unlock = () => ctx.resume().catch(() => {});
+  window.addEventListener('pointerdown', unlock, { once: true });
+  return Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
 }
 
 function makeDriveCurve(k) {
