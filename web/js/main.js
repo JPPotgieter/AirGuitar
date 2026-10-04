@@ -7,6 +7,7 @@ import { buildBody, LandmarkSmoother } from './body.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
+import { VERSION } from './version.js';
 
 const $ = (id) => document.getElementById(id);
 const settings = loadSettings();
@@ -426,6 +427,36 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+// ---------- Updates (Android app) ----------
+
+const RELEASE_API = 'https://api.github.com/repos/JPPotgieter/AirGuitar/releases/tags/android-latest';
+const APK_URL = 'https://github.com/JPPotgieter/AirGuitar/releases/download/android-latest/AirGuitarHero.apk';
+
+// The Android app checks GitHub for a newer test build and offers a one-tap update.
+async function checkForUpdate() {
+  if (!window.Capacitor?.isNativePlatform?.() || !VERSION.code) return;
+  try {
+    const res = await fetch(RELEASE_API, { cache: 'no-store' });
+    if (!res.ok) return;
+    const release = await res.json();
+    // Release titles look like "Air Guitar Hero 1.0.12 (Android)"; the last number is the build.
+    const m = /(\d+)\.(\d+)\.(\d+)/.exec(release.name || '');
+    if (!m || Number(m[3]) <= VERSION.code) return;
+    $('update-text').textContent = `🎉 Version ${m[0]} is ready!`;
+    $('update').classList.remove('hidden');
+  } catch {
+    // Offline or GitHub unreachable: try again next launch.
+  }
+}
+$('update-go').addEventListener('click', () => {
+  // Opens in the phone's browser, which downloads the APK; tap it to install the update.
+  window.open(APK_URL, '_system');
+  $('update').classList.add('hidden');
+});
+$('update-close').addEventListener('click', () => $('update').classList.add('hidden'));
+$('version').textContent = VERSION.code ? `v${VERSION.name}` : '';
+checkForUpdate();
+
 const params = new URLSearchParams(location.search);
 if (params.get('instrument') && INSTRUMENTS[params.get('instrument')]) setInstrument(params.get('instrument'));
 if (params.has('demo')) start(true);

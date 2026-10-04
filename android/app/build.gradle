@@ -21,6 +21,14 @@ android {
     // (see store/PLAY_STORE.md). Without them, release builds are left unsigned.
     def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
     signingConfigs {
+        // Test builds share one committed key, so each new test APK installs as an update
+        // over the last one. Store releases use your private upload key instead.
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
         if (keystorePath) {
             release {
                 storeFile file(keystorePath)

@@ -5,3 +5,6 @@ www/
 *.jks
 keystore.properties
 dist-share/
+
+# Shared test-build signing key, so test APKs install as updates over each other.
+!android/app/debug.keystore

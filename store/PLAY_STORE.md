@@ -49,7 +49,9 @@ and add:
 | `ANDROID_KEY_ALIAS` | `upload` |
 | `ANDROID_KEY_PASSWORD` | the key password (same as the keystore password if you pressed Enter) |
 
-Never commit `upload.jks` to the repo. `.gitignore` already blocks it.
+Never commit `upload.jks` to the repo. `.gitignore` already blocks it. (The committed
+`android/app/debug.keystore` is only for test APKs, so they install as updates over each other.
+It is not secret and must never be used for Play.)
 
 From the next build, the workflow produces a signed `AirGuitarHero.aab` (upload this to Play)
 and a signed `AirGuitarHero.apk`, both on the **android-latest** release.

@@ -45,6 +45,11 @@ Every push to GitHub builds the Android app automatically.
 3. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.
 4. Open **Air Guitar Hero** and allow camera access.
 
+**Updating:** test builds are all signed with the same test key (`android/app/debug.keystore`),
+so a new APK installs straight over the old one and keeps your settings. When a new build is
+out, the app shows **"Version … is ready! Update"** on the start screen. Tap it, then open the
+download and tap **Update**.
+
 Publishing to Google Play is covered step by step in [`store/PLAY_STORE.md`](store/PLAY_STORE.md).
 
 ### Website (any phone, including iPhone)

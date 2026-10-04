@@ -30,4 +30,9 @@ if (!fs.existsSync(modelCache)) {
 }
 fs.copyFileSync(modelCache, path.join(vendor, 'pose_landmarker_lite.task'));
 
-console.log('Built www/');
+// Version info for the in-app update check (CI sets these; local builds are "dev").
+const code = Number(process.env.VERSION_CODE || 0);
+const name = process.env.VERSION_NAME || 'dev';
+fs.writeFileSync(path.join(out, 'js', 'version.js'), `export const VERSION = ${JSON.stringify({ code, name })};\n`);
+
+console.log(`Built www/ (version ${name})`);
