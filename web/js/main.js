@@ -4,6 +4,7 @@ import { PoseTracker, DemoTracker } from './tracker.js';
 import { Renderer, drawGuitarThumb } from './render.js';
 import { AVATAR_OPTIONS, DEFAULT_LOOK, GUITARS, randomLook } from './looks.js';
 import { buildBody, LandmarkSmoother, handVisible } from './body.js';
+import { fitView } from './view.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
@@ -11,6 +12,8 @@ import { PianoInstrument } from './instruments/piano.js';
 import { SaxInstrument } from './instruments/sax.js';
 import { VERSION, BUILD } from './version.js';
 import { isNative, nativePlugin } from './native.js';
+import { CastLink } from './cast.js';
+import { packLandmarks, castSettings } from './castproto.js';
 import { Entitlements, PLAY_URL, TRIAL_DAYS } from './purchases.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,6 +21,7 @@ const settings = loadSettings();
 const audio = new GuitarAudio();
 const renderer = new Renderer($('stage'));
 const video = $('camera');
+const cast = new CastLink(renderCast); // Google Cast link to the TV (see the Google Cast section)
 
 let tracker = null;
 let camTracker = null; // kept between sessions so the body tracker only loads once
@@ -37,6 +41,7 @@ const hands = {
   R: { since: null, lostAt: null, active: false, weight: 0 },
 };
 let handsMissingSince = null;
+let lastCastFrame = 0;
 let view = null; // auto-zoom so the avatar + instrument always fit on screen
 let lastFrame = performance.now();
 const stats = { frames: 0, poses: 0 };
@@ -51,6 +56,8 @@ const app = {
     mouth = Math.min(1.2, mouth + 0.5 + velocity * 0.5);
   },
   setLabel,
+  // Every note the phone plays is also sent to the TV while casting.
+  broadcast: (p) => cast.send({ t: 'n', i: instrument.id, p }),
 };
 const INSTRUMENTS = {
   guitar: { name: 'Guitar', emoji: '🎸', make: () => new GuitarInstrument(app) },
@@ -127,38 +134,17 @@ function setInstrument(id, { preview = false } = {}) {
 }
 
 function updateView(b, dt) {
-  const S = b.S;
-  const pts = [
-    { x: b.head.c.x, y: b.head.c.y - b.head.r * 1.6 },
-    b.ankle.L, b.ankle.R, b.hand.L, b.hand.R, b.elbow.L, b.elbow.R, b.shoulder.L, b.shoulder.R,
-    ...instrument.viewPoints(b),
-  ];
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const p of pts) {
-    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
-    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x);
-    y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y + S * 0.1);
-  }
-  // Leave room for the thickness of arms, body and hands.
-  x0 -= S * 0.3;
-  x1 += S * 0.3;
   const W = renderer.w, H = renderer.h;
   const custom = $('custom');
   const customising = !custom.classList.contains('hidden');
   // Sideways (TV mode): a slimmer header and strip leave more room for the avatar.
   const wide = W > H * 1.3;
-  const top = customising ? 16 : wide ? 52 : 84;
-  const bottom = customising ? custom.offsetHeight + 8 : wide ? 46 : 76;
-  const side = 10;
-  const k = Math.min(2.5, (W - side * 2) / (x1 - x0), (H - top - bottom) / (y1 - y0));
-  // Centre horizontally, rest the feet just above the bottom strip.
-  const tx = W / 2 - ((x0 + x1) / 2) * k;
-  const ty = H - bottom - y1 * k;
-  if (!view) view = { k, x: tx, y: ty };
-  const a = Math.min(1, dt * 2.5);
-  view.k += (k - view.k) * a;
-  view.x += (tx - view.x) * a;
-  view.y += (ty - view.y) * a;
+  const margins = {
+    top: customising ? 16 : wide ? 52 : 84,
+    bottom: customising ? custom.offsetHeight + 8 : wide ? 46 : 76,
+    side: 10,
+  };
+  view = fitView(view, b, instrument.viewPoints(b), W, H, margins, dt);
 }
 
 // ---------- HUD ----------
@@ -215,6 +201,7 @@ function applySettings() {
   renderer.look = settings.look;
   buildStrip();
   saveSettings();
+  sendSettingsToTv();
 }
 
 function status(msg) {
@@ -266,6 +253,12 @@ function loop(now) {
       rawBody.handActive = { L: hands.L.active, R: hands.R.active };
       instrument.update(body, rawBody, dt, now);
       updateView(body, dt);
+      // Stream the player to the TV (about 30 times a second).
+      if (cast.connected && now - lastCastFrame > 30) {
+        lastCastFrame = now;
+        const hw = [Math.round(hands.L.weight * 100) / 100, Math.round(hands.R.weight * 100) / 100];
+        cast.send({ t: 'f', a: active.aspect, lm: packLandmarks(raw), hw });
+      }
       // Nudge the player when we can see them but not their hands.
       if (hands.L.active || hands.R.active) handsMissingSince = null;
       else handsMissingSince ??= now;
@@ -348,6 +341,7 @@ function goToMenu() {
   audio.muteAll();
   instrument.voice?.release(audio.ctx ? audio.ctx.currentTime : 0);
   for (const id of ['hud', 'panel', 'custom', 'paywall']) $(id).classList.add('hidden');
+  cast.send({ t: 'idle' }); // the TV shows its "pick an instrument" screen
   status('');
   // Coming back from a demo of a locked instrument: return to the free one.
   if (store.isLocked(settings.instrument)) setInstrument('guitar');
@@ -722,6 +716,47 @@ $('tv-connect').addEventListener('click', async () => {
   }
 });
 if (isNative && settings.tvMode) setTvMode(true);
+
+// ---------- Google Cast (Chromecast button, like YouTube's) ----------
+
+const CAST_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm20-7H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>' +
+  '<path class="filled" d="M5 7v1.63c3.96 1.28 7.09 4.41 8.37 8.37H19V7H5z"/></svg>';
+
+function sendSettingsToTv() {
+  if (cast.connected) cast.send({ t: 's', s: castSettings(settings) });
+}
+
+function renderCast(was) {
+  for (const b of document.querySelectorAll('.cast-btn')) {
+    b.classList.toggle('hidden', !cast.showButton);
+    b.classList.toggle('connected', cast.connected);
+    b.classList.toggle('connecting', cast.state === 'connecting');
+  }
+  // One cast button for every screen; the camera preview moves down beneath it.
+  document.body.classList.toggle('has-cast', cast.showButton);
+  const text =
+    cast.state === 'connecting' ? '📺 Connecting to your TV…' : `📺 Playing on ${cast.device || 'your TV'} · sound on the TV`;
+  for (const id of ['cast-pill', 'cast-note']) {
+    $(id).textContent = text;
+    $(id).classList.toggle('hidden', cast.state === 'idle');
+  }
+  // The TV plays the sound; keep the phone quiet so they don't echo.
+  audio.setMuted(cast.connected);
+  if (cast.connected && was !== 'connected') {
+    sendSettingsToTv();
+    if (isOpen('intro')) cast.send({ t: 'idle' });
+  }
+}
+
+for (const b of document.querySelectorAll('.cast-btn')) {
+  b.innerHTML = CAST_ICON;
+  b.addEventListener('click', () => cast.picker());
+}
+$('cast-pill').addEventListener('click', () => cast.picker());
+// Re-send settings now and then, in case the TV app was still loading.
+setInterval(sendSettingsToTv, 3000);
+cast.init();
 
 // ---------- Updates (sideloaded test builds only) ----------
 

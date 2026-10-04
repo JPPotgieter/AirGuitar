@@ -55,6 +55,7 @@ export class PianoInstrument {
   update(body, raw, dt, now) {
     this.kb = this.layout(body);
     for (let i = 0; i < this.flash.length; i++) this.flash[i] = Math.max(0, this.flash[i] - dt * 5);
+    if (this.app.passive) return; // on the TV the phone decides the key presses
     const t = now / 1000;
     const active = raw.handActive || { L: true, R: true };
     for (const side of ['L', 'R']) {
@@ -74,6 +75,7 @@ export class PianoInstrument {
   }
 
   play(key, velocity) {
+    this.app.broadcast?.({ key, velocity }); // tell the TV, if casting
     this.voice.play(freqOf(KEYS[key]), velocity);
     this.flash[key] = 1;
     this.lastKey = key;
@@ -81,6 +83,10 @@ export class PianoInstrument {
     const x = kb.x0 + kb.dir * (key + 0.5) * kb.keyW;
     this.app.onNote({ x, y: kb.top - kb.S * 0.2 }, velocity, '#a5f3fc');
     this.app.setLabel(KEYS[key], key, true);
+  }
+
+  remote({ key, velocity }) {
+    if (this.kb) this.play(key, velocity);
   }
 
   tap() {

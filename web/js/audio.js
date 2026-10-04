@@ -66,13 +66,19 @@ export class GuitarAudio {
     comp.threshold.value = -14;
     comp.ratio.value = 4;
     const master = (this.master = ctx.createGain());
-    master.gain.value = 0.9;
+    master.gain.value = this.muted ? 0 : 0.9;
     mix.connect(comp);
     wet.connect(comp);
     comp.connect(master).connect(ctx.destination);
 
     this.setTone(this.tone);
     await resumeQuickly(ctx);
+  }
+
+  // Silence the phone (e.g. while the TV plays the sound).
+  setMuted(muted) {
+    this.muted = muted;
+    if (this.master) this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.05);
   }
 
   setTone(tone) {

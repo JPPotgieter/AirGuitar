@@ -132,6 +132,7 @@ export class DrumsInstrument {
     this.pads = this.layout(body);
     for (const k of Object.keys(this.flash)) this.flash[k] = Math.max(0, this.flash[k] - dt * 4);
     const t = now / 1000;
+    if (this.app.passive) return; // on the TV the phone decides the hits
     const active = raw.handActive || { L: true, R: true };
     for (const side of ['L', 'R']) {
       const h = raw.hand[side];
@@ -165,12 +166,18 @@ export class DrumsInstrument {
   }
 
   hit(pad, velocity) {
+    this.app.broadcast?.({ pad: pad.id, velocity }); // tell the TV, if casting
     drumHit(this.app.audio, pad.id, velocity);
     this.flash[pad.id] = 1;
     this.lastHit = PADS.findIndex((p) => p.id === pad.id);
     const color = pad.kind === 'cymbal' ? '#facc15' : '#ff5d73';
     this.app.onNote({ x: pad.cx, y: pad.cy - pad.rr * 0.3 }, velocity, color);
     this.app.setLabel(pad.name, this.lastHit, true);
+  }
+
+  remote({ pad, velocity }) {
+    const p = this.pads?.find((x) => x.id === pad);
+    if (p) this.hit(p, velocity);
   }
 
   tap() {

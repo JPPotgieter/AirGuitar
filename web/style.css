@@ -351,3 +351,58 @@ button {
 }
 #strip.tiny { gap: 2px; }
 #strip.tiny div { padding: 5px 4px; font-size: 11px; }
+
+/* Google Cast button (standard cast icon) and "Playing on TV" pill. */
+.cast-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 12px);
+  width: 44px;
+  height: 44px;
+  padding: 9px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  z-index: 6;
+}
+.cast-btn svg { width: 100%; height: 100%; fill: #fff; }
+.cast-btn .filled { display: none; }
+.cast-btn.connected { background: #ffd65a; }
+.cast-btn.connected svg { fill: #1a0f3a; }
+.cast-btn.connected .filled { display: inline; }
+.cast-btn.connecting { animation: castpulse 1s ease-in-out infinite; }
+@keyframes castpulse { 50% { opacity: 0.4; } }
+#cast-btn { right: 12px; }
+body.has-cast #camera { top: calc(env(safe-area-inset-top) + 64px); }
+/* "Playing on TV" while playing: just above the chord strip. Hidden on the start screen,
+   which shows the same note inside its card. */
+#cast-pill {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 62px);
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 214, 90, 0.95);
+  color: #1a0f3a;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 3;
+}
+#cast-pill:has(~ #intro:not(.hidden)) { display: none; }
+#cast-note {
+  margin: 4px auto 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 214, 90, 0.95);
+  color: #1a0f3a !important;
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-block;
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .cast-btn { top: calc(env(safe-area-inset-top) + 6px); }
+  #cast-pill { bottom: calc(env(safe-area-inset-bottom) + 44px); }
+  body.has-cast #camera { top: calc(env(safe-area-inset-top) + 56px); }
+}

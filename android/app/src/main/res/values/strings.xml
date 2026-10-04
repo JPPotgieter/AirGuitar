@@ -4,4 +4,7 @@
     <string name="title_activity_main">Air Guitar Hero</string>
     <string name="package_name">com.jppotgieter.airguitar</string>
     <string name="custom_url_scheme">com.jppotgieter.airguitar</string>
+    <!-- Google Cast receiver app ID from the Cast SDK Developer Console (see store/CAST_SETUP.md).
+         Leave empty to hide the cast button. -->
+    <string name="cast_app_id" translatable="false"></string>
 </resources>

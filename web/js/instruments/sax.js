@@ -81,16 +81,23 @@ export class SaxInstrument {
       this.zone = Math.floor(z);
       this.app.setLabel(NOTES[this.zone][0], this.zone, false);
     }
+    if (this.app.passive) return; // on the TV the phone decides the notes
     const peak = this.stroke.push(u, now / 1000);
     if (peak) this.play(Math.min(1, 0.35 + peak / 6));
   }
 
   play(velocity) {
     if (!this.geo) return;
+    this.app.broadcast?.({ zone: this.zone, velocity }); // tell the TV, if casting
     const [name, freq] = NOTES[this.zone];
     this.voice.play(freq, velocity);
     this.app.onNote(this.geo.at(BODY_END - 0.25, 0.75), velocity, '#fbbf24');
     this.app.setLabel(name, this.zone, true);
+  }
+
+  remote({ zone, velocity }) {
+    this.zone = zone;
+    this.play(velocity);
   }
 
   tap() {

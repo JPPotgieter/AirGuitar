@@ -32,7 +32,8 @@ export class GuitarInstrument {
     this.resting = !active[this.app.settings.lefty ? 'R' : 'L'];
     this.geo = this.place(body, dt);
     if (active[this.geo.fretSide]) this.updateZone(body);
-    if (active[this.geo.strumSide]) this.detectStrum(raw, now);
+    // On the TV (passive) the phone decides when notes play; we only draw.
+    if (active[this.geo.strumSide] && !this.app.passive) this.detectStrum(raw, now);
     else this.lost(); // forget the last position so the hand reappearing doesn't strum
   }
 
@@ -108,12 +109,19 @@ export class GuitarInstrument {
 
   play(direction, velocity) {
     if (!this.geo) return;
+    this.app.broadcast?.({ zone: this.zone, direction, velocity }); // tell the TV, if casting
     const name = this.chords[this.zone];
     this.app.audio.strum(name, direction, velocity);
     this.app.renderer.stringEnergy.fill(0.6 + velocity * 0.6);
     const color = this.app.settings.tone === 'rock' ? '#ff5d73' : '#ffd65a';
     this.app.onNote(this.geo.at(0, 0), velocity, color);
     this.app.setLabel(name, this.zone, true);
+  }
+
+  // A note played on the phone, replayed on the TV.
+  remote({ zone, direction, velocity }) {
+    this.zone = zone;
+    this.play(direction, velocity);
   }
 
   tap() {

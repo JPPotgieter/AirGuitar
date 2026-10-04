@@ -51,7 +51,7 @@ export class TromboneInstrument {
       this.zone = Math.floor(z);
       this.app.setLabel(NOTES[this.zone][0], this.zone, false);
     }
-    this.detectStroke(e, now / 1000);
+    if (!this.app.passive) this.detectStroke(e, now / 1000);
   }
 
   place(b, dt) {
@@ -89,10 +89,16 @@ export class TromboneInstrument {
 
   play(velocity) {
     if (!this.geo) return;
+    this.app.broadcast?.({ zone: this.zone, velocity }); // tell the TV, if casting
     const [name, freq] = NOTES[this.zone];
     this.voice.play(freq, velocity);
     this.app.onNote(this.geo.at(1.8, -0.15), velocity, '#fde047');
     this.app.setLabel(name, this.zone, true);
+  }
+
+  remote({ zone, velocity }) {
+    this.zone = zone;
+    this.play(velocity);
   }
 
   tap() {

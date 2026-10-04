@@ -46,14 +46,14 @@ for setting up the subscription in Play Console.
 
 ### 📺 Play on TV
 
-In the Android app, tap **📺 Play on TV**:
-1. **Connect to TV** opens your phone's cast screen. Pick your Chromecast or smart TV, and the
-   stage and sound appear on the TV.
-2. **TV mode** locks the app sideways so it fills the TV.
-3. Stand the phone sideways under the TV, camera facing you, about 2 m back.
+**Chromecast (cast button):** tap the cast icon at the top right and pick your Chromecast. The
+TV runs the Air Guitar Hero TV app (`web/tv.html`), which draws the stage in full HD and plays
+the sound. Your phone tracks you and sends your moves and notes to the TV. One-time setup:
+[`store/CAST_SETUP.md`](store/CAST_SETUP.md).
 
-It uses Android's built-in screen casting ("Cast", "Smart View" or "Screen mirroring",
-depending on the phone), so it works with any Chromecast or Miracast TV.
+**Any TV (screen mirroring):** **📺 Play on TV → Connect to TV** opens your phone's own
+casting screen ("Cast", "Smart View" or "Screen mirroring"). **TV mode** locks the app
+sideways so the mirrored picture fills the TV.
 
 ### Everything else
 
@@ -122,6 +122,8 @@ The camera only works over HTTPS, so the site is hosted on GitHub Pages (free):
 | Saxophone: hand position along the sax | `web/js/instruments/sax.js` |
 | Shared "move then stop" note trigger (trombone, sax) | `web/js/instruments/stroke.js` |
 | Drum, trombone, piano and saxophone sound synthesis | `web/js/sounds.js` |
+| Chromecast: TV app (Cast receiver), phone↔TV messages, phone-side cast link | `web/tv.html`, `web/js/tv.js`, `web/js/castproto.js`, `web/js/cast.js` |
+| Native Android: Chromecast picker/messaging, screen-cast shortcut | `android/app/src/main/java/com/jppotgieter/airguitar/` |
 | Free/full version: Google Play subscription and free trial ([@capgo/native-purchases](https://github.com/Cap-go/capacitor-native-purchases), with a small fix in `patches/` so the trial offer is the one purchased) | `web/js/purchases.js` |
 | Drawing the stage, avatar, guitar and music notes on a canvas | `web/js/render.js` |
 | Guitar sound, synthesised with the Karplus–Strong plucked-string algorithm (Web Audio) | `web/js/audio.js` |

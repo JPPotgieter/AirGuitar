@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Air Guitar Hero TV</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* TV (Chromecast) layout: big, readable from the sofa, nothing to tap. */
+    body { cursor: none; }
+    #chord { font-size: 72px; top: 24px; }
+    #strip { bottom: 22px; }
+    #strip div { font-size: 22px; padding: 10px 16px; min-width: 60px; }
+    #strip.small div { font-size: 18px; padding: 8px 10px; min-width: 0; }
+    #strip.tiny div { font-size: 15px; padding: 7px 7px; }
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-align: center;
+      background: radial-gradient(circle at 50% 35%, rgba(59, 26, 107, 0.92), rgba(11, 8, 32, 0.96) 70%);
+      z-index: 5;
+    }
+    #splash .logo { font-size: 120px; }
+    #splash h1 { margin: 0; font-size: 64px; }
+    #splash p { margin: 0; font-size: 30px; color: #ddd; }
+    #splash .hint { font-size: 22px; color: #aaa; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div id="chord"></div>
+  <div id="strip"></div>
+  <div id="splash">
+    <div class="logo">🎸</div>
+    <h1>Air Guitar Hero</h1>
+    <p id="splash-text">Connected! Pick an instrument on your phone and tap <b>Start playing</b>.</p>
+    <p class="hint">Stand your phone below the TV, camera facing you, about 2 m away.</p>
+  </div>
+  <!-- Google Cast receiver framework (provided by the Chromecast). -->
+  <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+  <script type="module" src="js/tv.js"></script>
+</body>
+</html>

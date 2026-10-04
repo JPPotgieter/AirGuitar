@@ -24,6 +24,11 @@
 
         </activity>
 
+        <!-- Google Cast: which receiver app to launch on the TV. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.jppotgieter.airguitar.CastOptionsProvider" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
