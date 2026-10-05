@@ -37,7 +37,7 @@ export class PoseTracker {
     const opts = (delegate) => ({
       baseOptions: { modelAssetPath: model, delegate },
       runningMode: 'VIDEO',
-      numPoses: 1,
+      numPoses: 3, // see everyone in view; the app locks onto the player (playerlock.js)
       minPoseDetectionConfidence: 0.5,
       minPosePresenceConfidence: 0.5,
       minTrackingConfidence: 0.5,
@@ -72,13 +72,14 @@ export class PoseTracker {
     return (this.video.videoWidth || 4) / (this.video.videoHeight || 3);
   }
 
-  // Returns the latest landmarks (array of 33) or null. Call once per animation frame.
+  // Returns every person in view (an array of 33-landmark arrays), or null if nobody.
+  // Call once per animation frame; undefined means no new camera frame yet.
   detect(now) {
     if (!this.landmarker || this.video.readyState < 2) return undefined;
     if (this.video.currentTime === this.lastTime) return undefined; // no new camera frame
     this.lastTime = this.video.currentTime;
     const res = this.landmarker.detectForVideo(this.video, now);
-    return res.landmarks && res.landmarks[0] ? res.landmarks[0] : null;
+    return res.landmarks && res.landmarks.length ? res.landmarks : null;
   }
 }
 

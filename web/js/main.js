@@ -6,6 +6,7 @@ import { AVATAR_OPTIONS, DEFAULT_LOOK, GUITARS, randomLook } from './looks.js';
 import { buildBody, LandmarkSmoother, handVisible } from './body.js';
 import { fitView } from './view.js';
 import { ReadyGate } from './ready.js';
+import { PlayerLock } from './playerlock.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
@@ -43,6 +44,7 @@ const hands = {
 };
 let handsMissingSince = null;
 const gate = new ReadyGate(); // "get in position" before playing (camera mode)
+const playerLock = new PlayerLock(); // with several people in view, follow the player
 let goUntil = 0; // show "Rock on!" until this time
 let lastCastFrame = 0;
 let view = null; // auto-zoom so the avatar + instrument always fit on screen
@@ -226,6 +228,8 @@ function loop(now) {
     let raw;
     try {
       raw = active.detect(now);
+      // The camera tracker reports everyone in view: keep to the player.
+      if (active instanceof PoseTracker && raw) raw = playerLock.pick(raw, active.aspect, gate.ready);
     } catch (e) {
       console.error(e);
     }
@@ -256,6 +260,9 @@ function loop(now) {
       // Unsmoothed body for hit/strum detection: no added lag.
       const rawBody = buildBody(raw, active.aspect, W, H);
       rawBody.handActive = { L: hands.L.active, R: hands.R.active };
+      // Not sure this is the player (someone crossed their spot while they were hidden):
+      // draw them, but don't let their hands play anything.
+      if (active instanceof PoseTracker && !playerLock.confident) rawBody.handActive = { L: false, R: false };
       updateReady(raw, active, now);
       instrument.update(body, rawBody, dt, now);
       updateView(body, dt);
@@ -392,6 +399,7 @@ function goToMenu() {
   for (const id of ['hud', 'panel', 'custom', 'paywall', 'ready']) $(id).classList.add('hidden');
   $('intro').classList.remove('hidden');
   gate.reset();
+  playerLock.reset();
   app.passive = false;
   status('');
   const safely = (step) => {
@@ -873,4 +881,4 @@ if (params.get('instrument') && INSTRUMENTS[params.get('instrument')]) setInstru
 if (params.has('demo')) start(true);
 
 // Exposed for debugging in the browser console.
-window.airguitar = { audio, renderer, settings, stats, hands, get instrument() { return instrument; } };
+window.airguitar = { audio, renderer, settings, stats, hands, gate, playerLock, get body() { return body; }, get instrument() { return instrument; } };
