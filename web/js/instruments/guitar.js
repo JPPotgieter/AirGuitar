@@ -1,5 +1,5 @@
 import { PRESETS, } from '../chords.js';
-import { GEO } from '../render.js';
+import { neckGeo } from '../render.js';
 import { lerp } from '../body.js';
 
 // Air guitar: the neck points at the fretting hand, whose position along it picks the chord;
@@ -16,6 +16,11 @@ export class GuitarInstrument {
     this.neckAngle = null;
     this.geo = null;
     this.strum = { armed: 0, v: null, t: 0 };
+  }
+
+  // Neck geometry for the player's Guitar reach setting (Short / Normal / Long).
+  get neck() {
+    return neckGeo(this.app.settings.guitarReach);
   }
 
   get chords() {
@@ -73,8 +78,9 @@ export class GuitarInstrument {
   updateZone(b) {
     const list = this.chords;
     const u = this.geo.local(b.hand[this.geo.fretSide]).u;
-    const zl = (GEO.nut - GEO.zoneEnd) / list.length;
-    const f = (GEO.nut - u) / zl; // 0 at the nut, grows towards the body
+    const N = this.neck;
+    const zl = (N.nut - N.zoneEnd) / list.length;
+    const f = (N.nut - u) / zl; // 0 at the nut, grows towards the body
     const clamped = Math.max(0, Math.min(list.length - 0.001, f));
     // Hysteresis so the chord doesn't flicker on a zone boundary.
     if (clamped < this.zone - 0.15 || clamped > this.zone + 1.15) {
@@ -131,7 +137,8 @@ export class GuitarInstrument {
   viewPoints() {
     const g = this.geo;
     if (!g) return [];
-    return [g.at(GEO.head + 0.1, -0.45), g.at(GEO.head + 0.1, 0.3), g.at(-1, 0.65), g.at(-1, -0.65)];
+    const N = this.neck;
+    return [g.at(N.head + 0.1, -0.45), g.at(N.head + 0.1, 0.3), g.at(-1, 0.65), g.at(-1, -0.65)];
   }
 
   // Strap and guitar sit behind the arms.
@@ -141,15 +148,16 @@ export class GuitarInstrument {
     const { ctx } = r;
     const b = scene.body;
     const S = b.S;
-    const strapEnd = g.at(GEO.neckStart, -0.15);
-    const strapStart = g.at(GEO.bridge - 0.05, 0);
+    const N = this.neck;
+    const strapEnd = g.at(N.neckStart, -0.15);
+    const strapStart = g.at(N.bridge - 0.05, 0);
     ctx.strokeStyle = scene.guitarStyle.strap;
     ctx.lineWidth = S * 0.09;
     ctx.beginPath();
     ctx.moveTo(strapStart.x, strapStart.y);
     ctx.quadraticCurveTo(b.shoulder[g.fretSide].x, b.shoulder[g.fretSide].y - S * 0.1, strapEnd.x, strapEnd.y);
     ctx.stroke();
-    r.drawGuitar({ ...scene, guitar: g, zone: this.zone, chords: this.chords });
+    r.drawGuitar({ ...scene, guitar: g, zone: this.zone, chords: this.chords, neck: N });
   }
 
   // Pick in the strumming hand.

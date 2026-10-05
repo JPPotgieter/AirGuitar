@@ -103,7 +103,7 @@ const HOW = {
 };
 
 function loadSettings() {
-  const d = { instrument: 'guitar', drumSensitivity: 'normal', preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
+  const d = { instrument: 'guitar', drumSensitivity: 'normal', guitarReach: 'normal', preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
   let saved = {};
   try {
     saved = JSON.parse(localStorage.getItem('airguitar') || '{}');
@@ -186,6 +186,7 @@ function applySettings() {
   $('showcam').checked = settings.showCam;
   $('instrument').value = settings.instrument;
   $('drum-sens').value = settings.drumSensitivity;
+  $('guitar-reach').value = settings.guitarReach;
   for (const el of document.querySelectorAll('.drums-only')) el.classList.toggle('hidden', settings.instrument !== 'drums');
   for (const el of document.querySelectorAll('.guitar-only')) el.classList.toggle('hidden', settings.instrument !== 'guitar');
   for (const b of document.querySelectorAll('#pick-instrument button')) {
@@ -566,6 +567,10 @@ for (const [id, ins] of Object.entries(INSTRUMENTS)) {
   $('pick-instrument').appendChild(b);
 }
 $('instrument').addEventListener('change', (e) => setInstrument(e.target.value));
+$('guitar-reach').addEventListener('change', (e) => {
+  settings.guitarReach = e.target.value;
+  applySettings();
+});
 $('drum-sens').addEventListener('change', (e) => {
   settings.drumSensitivity = e.target.value;
   if (instrument.id === 'drums') instrument.setSensitivity(e.target.value);

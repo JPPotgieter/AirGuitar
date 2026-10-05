@@ -202,8 +202,8 @@ export class DemoTracker {
       hand('L', mouth.x - 0.35 * SHOULDER_X, mouth.y + 0.35 * SHOULDER_Y);
     } else {
       // Guitar. Fretting (left) hand slides along the neck every two bars.
-      const zone = Math.floor(t / 2) % 4;
-      const reach = 0.24 + zone * 0.04;
+      const zone = Math.floor(t / 2) % 6;
+      const reach = 0.19 + zone * 0.045; // spans every chord on the normal-reach neck
       hand('L', 0.5 + reach * 0.95, 0.5 - reach * 0.35);
       set(13, 0.7, 0.45);
       // Strumming (right) hand: down-up on the beat.

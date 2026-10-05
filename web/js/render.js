@@ -8,6 +8,20 @@ export const GEO = {
   head: 3.15,
 };
 
+// Guitar reach setting: how far along the neck the first chord sits, measured from the sound
+// hole in shoulder-widths. "Normal" keeps every chord within a comfortable, bent-elbow reach;
+// "long" is the original full-stretch neck.
+export const REACH = {
+  short: { nut: 1.85, zoneEnd: 0.8 },
+  normal: { nut: 2.15, zoneEnd: 0.92 },
+  long: { nut: 2.7, zoneEnd: 1.05 },
+};
+const DEFAULT_NECK = GEO;
+export function neckGeo(reach = 'normal') {
+  const r = REACH[reach] || REACH.normal;
+  return { ...GEO, nut: r.nut, zoneEnd: r.zoneEnd, head: r.nut + 0.45 };
+}
+
 import { DEFAULT_LOOK } from './looks.js';
 
 export class Renderer {
@@ -399,6 +413,7 @@ export class Renderer {
   }
 
   drawGuitar(scene) {
+    const GEO = scene.neck || DEFAULT_NECK;
     const { ctx } = this;
     const g = scene.guitar;
     const S = g.S;

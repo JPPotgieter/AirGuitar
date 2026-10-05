@@ -26,6 +26,6 @@ export function unpackLandmarks(flat) {
 
 // The settings the TV needs to draw and sound like the phone.
 export function castSettings(settings) {
-  const { instrument, look, guitar, lefty, preset, tone } = settings;
-  return { instrument, look, guitar, lefty, preset, tone, v: PROTOCOL };
+  const { instrument, look, guitar, lefty, preset, tone, guitarReach } = settings;
+  return { instrument, look, guitar, lefty, preset, tone, guitarReach, v: PROTOCOL };
 }
