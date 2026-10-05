@@ -201,13 +201,20 @@ export class PianoVoice {
     this.voices.push({ g, osc, osc2, end: t + ring });
     this.voices = this.voices.filter((v) => v.end > t);
     // Keep polyphony sensible: fade out the oldest notes beyond 10.
-    while (this.voices.length > 10) {
-      const v = this.voices.shift();
-      v.g.gain.cancelScheduledValues(t);
-      v.g.gain.setTargetAtTime(0.0001, t, 0.05);
-      v.osc.stop(t + 0.3);
-      v.osc2.stop(t + 0.3);
-    }
+    while (this.voices.length > 10) this.fadeOut(this.voices.shift(), t);
+  }
+
+  fadeOut(v, t) {
+    v.g.gain.cancelScheduledValues(t);
+    v.g.gain.setTargetAtTime(0.0001, t, 0.05);
+    v.osc.stop(t + 0.3);
+    v.osc2.stop(t + 0.3);
+  }
+
+  // Silence every ringing note (e.g. when leaving the piano).
+  release(t) {
+    for (const v of this.voices) this.fadeOut(v, t);
+    this.voices = [];
   }
 }
 

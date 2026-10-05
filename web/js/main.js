@@ -331,23 +331,36 @@ async function start(demo) {
 const isOpen = (id) => !$(id).classList.contains('hidden');
 
 function goToMenu() {
-  if (tracker instanceof PoseTracker) tracker.stop(); // camera off
+  // Show the menu first, so a problem in any cleanup step below can never leave the player
+  // stuck on an empty stage.
+  for (const id of ['hud', 'panel', 'custom', 'paywall']) $(id).classList.add('hidden');
+  $('intro').classList.remove('hidden');
+  status('');
+  const safely = (step) => {
+    try {
+      step();
+    } catch (e) {
+      console.error('Cleanup step failed', e);
+    }
+  };
+  safely(() => {
+    if (tracker instanceof PoseTracker) tracker.stop(); // camera off
+  });
   tracker = null;
   previewTracker = null;
   body = null;
   view = null;
-  smoother.reset();
-  instrument.reset();
-  instrument.lost?.();
-  audio.muteAll();
-  instrument.voice?.release(audio.ctx ? audio.ctx.currentTime : 0);
-  for (const id of ['hud', 'panel', 'custom', 'paywall']) $(id).classList.add('hidden');
-  cast.send({ t: 'idle' }); // the TV shows its "pick an instrument" screen
-  status('');
+  safely(() => smoother.reset());
+  safely(() => instrument.reset());
+  safely(() => instrument.lost?.());
+  safely(() => audio.muteAll());
+  safely(() => instrument.voice?.release?.(audio.ctx ? audio.ctx.currentTime : 0));
+  safely(() => cast.send({ t: 'idle' })); // the TV shows its "pick an instrument" screen
   // Coming back from a demo of a locked instrument: return to the free one.
-  if (store.isLocked(settings.instrument)) setInstrument('guitar');
-  applySettings();
-  $('intro').classList.remove('hidden');
+  safely(() => {
+    if (store.isLocked(settings.instrument)) setInstrument('guitar');
+  });
+  safely(() => applySettings());
 }
 
 // One step back: close whatever is on top, else leave the session. Returns false on the menu.
