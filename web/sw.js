@@ -1,5 +1,5 @@
 // Cache-first service worker so the app (and the downloaded body-tracking model) load fast and offline.
-const CACHE = 'airguitar-v9';
+const CACHE = 'airguitar-v10';
 const SHELL = [
   './', 'index.html', 'privacy.html', 'style.css', 'manifest.webmanifest',
   'js/main.js', 'js/version.js', 'js/native.js', 'js/cast.js', 'js/castproto.js', 'js/view.js', 'js/purchases.js', 'js/looks.js', 'js/body.js', 'js/sounds.js',

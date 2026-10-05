@@ -77,5 +77,47 @@ for (const playing of [false, true]) {
     `${pct}% of frames show her while the player is hidden, ${stuck} while the player was in view, ${sounding} able to play`
   );
 }
+{
+  // Only the player in view, but the tracker reports them twice: same body, one copy with the
+  // arms somewhere else. The avatar must not hop between the copies.
+  const lock = new PlayerLock();
+  let hops = 0, prevWrist = null;
+  for (let f = 0; f < 200; f++) {
+    const real = person(0.5 + Math.sin(f * 1.7) * 0.006, 0.4, 0.26); // both copies jitter about
+    const wx = 0.35 + Math.sin(f / 10) * 0.05; // strumming hand moving smoothly
+    real[16] = { x: wx, y: 0.55, visibility: 1 };
+    real[15] = { x: 0.75, y: 0.3, visibility: 1 };
+    const ghost = person(0.5 + Math.cos(f * 2.3) * 0.006, 0.4, 0.26);
+    ghost[16] = { x: 0.15, y: 0.75, visibility: 1 }; // the copy's arm is somewhere else entirely
+    ghost[15] = { x: 0.9, y: 0.6, visibility: 1 };
+    const r = lock.pick(f % 2 ? [real, ghost] : [ghost, real], ASPECT, f > 5);
+    if (r && prevWrist !== null && Math.abs(r[16].x - prevWrist) > 0.05) hops++;
+    prevWrist = r ? r[16].x : prevWrist;
+  }
+  check('one player reported twice: the avatar sticks to one copy', hops === 0, `${hops} jumps`);
+}
+{
+  // Now and then the tracker swaps the player's left and right for a frame or two.
+  const lock = new PlayerLock();
+  let flips = 0;
+  for (let f = 0; f < 200; f++) {
+    const lm = person(0.5 + Math.sin(f / 30) * 0.03, 0.4, 0.26);
+    lm[15] = { x: 0.75, y: 0.3, visibility: 1 };
+    lm[16] = { x: 0.4, y: 0.55, visibility: 1 };
+    const glitch = f % 17 === 3 || f % 17 === 4;
+    const seen = glitch ? lm.map((p, i) => lm[i >= 11 && i % 2 ? i + 1 : i >= 12 && i % 2 === 0 ? i - 1 : i]) : lm;
+    const r = lock.pick([seen], ASPECT, f > 5);
+    if (r[11].x < r[12].x || r[15].x < r[16].x) flips++;
+  }
+  check('left and right mixed up for a frame: the avatar keeps playing the same way round', flips === 0, `${flips} flipped frames`);
+}
+{
+  // Starting with the tracker's sides already mixed up: facing the phone sorts them out.
+  const lock = new PlayerLock();
+  const lm = person(0.5, 0.4, 0.26);
+  const swapped = lm.map((p, i) => lm[i >= 11 && i % 2 ? i + 1 : i >= 12 && i % 2 === 0 ? i - 1 : i]);
+  const r = lock.pick([swapped], ASPECT, false);
+  check('mixed-up sides on the very first frame are put right', r[11].x > r[12].x);
+}
 if (!pass) process.exit(1);
 console.log('OK: player lock keeps following the player.');

@@ -37,7 +37,7 @@ export class PoseTracker {
     const opts = (delegate) => ({
       baseOptions: { modelAssetPath: model, delegate },
       runningMode: 'VIDEO',
-      numPoses: 3, // see everyone in view; the app locks onto the player (playerlock.js)
+      numPoses: 2, // see a second person too; the app locks onto the player (playerlock.js)
       minPoseDetectionConfidence: 0.5,
       minPosePresenceConfidence: 0.5,
       minTrackingConfidence: 0.5,
