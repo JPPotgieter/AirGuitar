@@ -100,7 +100,7 @@ const HOW = {
 };
 
 function loadSettings() {
-  const d = { instrument: 'guitar', drumSensitivity: 'normal', tvMode: false, preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
+  const d = { instrument: 'guitar', drumSensitivity: 'normal', preset: 'campfire', tone: 'acoustic', lefty: false, showCam: true, guitar: 'acoustic' };
   let saved = {};
   try {
     saved = JSON.parse(localStorage.getItem('airguitar') || '{}');
@@ -109,6 +109,7 @@ function loadSettings() {
   s.look = { ...DEFAULT_LOOK, ...(saved.look || {}) };
   if (!GUITARS[s.guitar]) s.guitar = d.guitar;
   if (!['guitar', 'drums', 'trombone', 'piano', 'sax'].includes(s.instrument)) s.instrument = d.instrument;
+  delete s.tvMode; // TV mode is never remembered: the app always opens upright
   return s;
 }
 function saveSettings() {
@@ -679,10 +680,11 @@ store.init();
 const tvCast = nativePlugin('TvCast');
 const orientation = nativePlugin('ScreenOrientation');
 
-// TV mode: lock the app sideways so the mirrored picture fills the TV.
+// TV mode: lock the app sideways so the mirrored picture fills the TV. Only for this session:
+// it switches off when you turn it off or close the app.
+let tvMode = false;
 async function setTvMode(on) {
-  settings.tvMode = on;
-  saveSettings();
+  tvMode = on;
   $('tv-mode').textContent = on ? '✅ TV mode is on (tap to turn off)' : 'Turn on TV mode';
   $('tv-mode').classList.toggle('on', on);
   try {
@@ -704,10 +706,10 @@ for (const el of document.querySelectorAll('.native-only')) el.classList.toggle(
 $('tv-open').addEventListener('click', openTv);
 $('tv-open2').addEventListener('click', openTv);
 $('tv-close').addEventListener('click', () => $('tv').classList.add('hidden'));
-$('tv-mode').addEventListener('click', () => setTvMode(!settings.tvMode));
+$('tv-mode').addEventListener('click', () => setTvMode(!tvMode));
 $('tv-connect').addEventListener('click', async () => {
   // Casting looks best sideways, so switch TV mode on as we connect.
-  if (!settings.tvMode) await setTvMode(true);
+  if (!tvMode) await setTvMode(true);
   try {
     await tvCast.openCastSettings();
     $('tv-msg').textContent = 'Pick your TV, then come back to Air Guitar Hero.';
@@ -715,7 +717,8 @@ $('tv-connect').addEventListener('click', async () => {
     $('tv-msg').textContent = "Your phone didn't open its cast screen. Use the tip below instead.";
   }
 });
-if (isNative && settings.tvMode) setTvMode(true);
+// Clear any sideways lock left over from an earlier version that remembered TV mode.
+if (isNative) orientation?.unlock?.().catch?.(() => {});
 
 // ---------- Google Cast (Chromecast button, like YouTube's) ----------
 
