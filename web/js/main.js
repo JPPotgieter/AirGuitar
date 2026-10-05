@@ -5,6 +5,7 @@ import { Renderer, drawGuitarThumb } from './render.js';
 import { AVATAR_OPTIONS, DEFAULT_LOOK, GUITARS, randomLook } from './looks.js';
 import { buildBody, LandmarkSmoother, handVisible } from './body.js';
 import { fitView } from './view.js';
+import { ReadyGate } from './ready.js';
 import { GuitarInstrument } from './instruments/guitar.js';
 import { DrumsInstrument } from './instruments/drums.js';
 import { TromboneInstrument } from './instruments/trombone.js';
@@ -41,6 +42,8 @@ const hands = {
   R: { since: null, lostAt: null, active: false, weight: 0 },
 };
 let handsMissingSince = null;
+const gate = new ReadyGate(); // "get in position" before playing (camera mode)
+let goUntil = 0; // show "Rock on!" until this time
 let lastCastFrame = 0;
 let view = null; // auto-zoom so the avatar + instrument always fit on screen
 let lastFrame = performance.now();
@@ -252,6 +255,7 @@ function loop(now) {
       // Unsmoothed body for hit/strum detection: no added lag.
       const rawBody = buildBody(raw, active.aspect, W, H);
       rawBody.handActive = { L: hands.L.active, R: hands.R.active };
+      updateReady(raw, active, now);
       instrument.update(body, rawBody, dt, now);
       updateView(body, dt);
       // Stream the player to the TV (about 30 times a second).
@@ -260,17 +264,19 @@ function loop(now) {
         const hw = [Math.round(hands.L.weight * 100) / 100, Math.round(hands.R.weight * 100) / 100];
         cast.send({ t: 'f', a: active.aspect, lm: packLandmarks(raw), hw });
       }
-      // Nudge the player when we can see them but not their hands.
+      // Nudge the player when we can see them but not their hands (once playing).
       if (hands.L.active || hands.R.active) handsMissingSince = null;
       else handsMissingSince ??= now;
-      status(active === tracker && handsMissingSince !== null && now - handsMissingSince > 1200 ? 'Show your hands to play 🙌' : '');
-    } else if (raw === null && now - lastSeen > 800) {
-      status(`Step back so the camera can see your upper body ${INSTRUMENTS[settings.instrument].emoji}`);
-      instrument.lost();
+      const nudge = inCameraMode() && gate.ready && handsMissingSince !== null && now - handsMissingSince > 1200;
+      status(nudge ? 'Show your hands to play 🙌' : '');
+    } else if (raw === null) {
+      updateReady(null, active, now);
+      if (now - lastSeen > 800) instrument.lost();
     }
   }
 
-  const alpha = body ? Math.max(0, Math.min(1, 1 - (now - lastSeen - 800) / 600)) : 0;
+  let alpha = body ? Math.max(0, Math.min(1, 1 - (now - lastSeen - 800) / 600)) : 0;
+  if (inCameraMode() && !gate.ready) alpha *= 0.45; // faded until counted in
   renderer.frame(dt, {
     time: now / 1000,
     body: alpha > 0 ? body : null,
@@ -309,7 +315,11 @@ async function start(demo) {
     }
     previewTracker = null;
     instrument.reset();
-    status(demo ? '' : `Step back so the camera can see your upper body ${INSTRUMENTS[settings.instrument].emoji}`);
+    status('');
+    // Camera play waits behind the "get in position" card; the demo starts straight away.
+    gate.reset();
+    app.passive = !demo;
+    if (!demo) renderReady(performance.now());
   } catch (e) {
     console.error(e);
     status('');
@@ -326,6 +336,51 @@ async function start(demo) {
   if (!history.state?.playing) history.pushState({ playing: true }, '');
 }
 
+// ---------- Get in position (camera mode) ----------
+
+const inCameraMode = () => tracker instanceof PoseTracker && tracker === camTracker && !previewTracker;
+
+// Nothing plays until the player is in position and still; then 3-2-1, "Rock on!".
+function updateReady(raw, active, now) {
+  if (!(active instanceof PoseTracker)) {
+    app.passive = false; // demo and customise preview play straight away
+    $('ready').classList.add('hidden');
+    return;
+  }
+  gate.update(raw, active.aspect, { L: hands.L.active, R: hands.R.active }, now);
+  app.passive = !gate.ready;
+  if (gate.justStarted) {
+    // Fresh start for the instrument so nothing from the waiting time triggers a note.
+    instrument.reset();
+    instrument.lost?.();
+    goUntil = now + 900;
+  }
+  renderReady(now);
+}
+
+function renderReady(now) {
+  const card = $('ready');
+  const c = gate.checks;
+  if (gate.ready) {
+    card.classList.toggle('hidden', now > goUntil);
+    card.classList.add('go');
+    $('ready-count').textContent = '🎸 Rock on!';
+    return;
+  }
+  card.classList.remove('hidden', 'go');
+  $('ready-title').textContent = gate.paused ? '⏸ Paused: get back in position' : 'Get in position';
+  const item = (id, ok, text) => {
+    $(id).classList.toggle('ok', ok);
+    $(id).querySelector('span').textContent = text;
+  };
+  item('rc-seen', c.seen, c.seen ? 'I can see you' : 'Show me your head and shoulders');
+  item('rc-hands', c.hands, c.hands ? 'Both hands in view' : 'Show both hands');
+  const distText = { close: 'Step back a little', far: 'Come a bit closer', ok: 'Good distance', unknown: 'Good distance' };
+  item('rc-dist', c.dist === 'ok', distText[c.dist]);
+  item('rc-still', c.still && c.seen, 'Hold still');
+  $('ready-count').textContent = gate.progress > 0 ? String(Math.max(1, Math.ceil(3 * (1 - gate.progress)))) : '';
+}
+
 // ---------- Back to the menu ----------
 
 const isOpen = (id) => !$(id).classList.contains('hidden');
@@ -333,8 +388,10 @@ const isOpen = (id) => !$(id).classList.contains('hidden');
 function goToMenu() {
   // Show the menu first, so a problem in any cleanup step below can never leave the player
   // stuck on an empty stage.
-  for (const id of ['hud', 'panel', 'custom', 'paywall']) $(id).classList.add('hidden');
+  for (const id of ['hud', 'panel', 'custom', 'paywall', 'ready']) $(id).classList.add('hidden');
   $('intro').classList.remove('hidden');
+  gate.reset();
+  app.passive = false;
   status('');
   const safely = (step) => {
     try {
