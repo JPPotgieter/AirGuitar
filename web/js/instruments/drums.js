@@ -77,6 +77,34 @@ export class HitDetector {
   }
 }
 
+// Kick drum: lift a knee, then stomp. Tracking of sitting legs is jumpy (a knee can leap for a
+// single frame), so a stomp only counts if the knee was clearly lifted for a couple of frames.
+export class KickDetector {
+  constructor() {
+    this.hit = new HitDetector(2, 0.18);
+    this.reset();
+  }
+  reset() {
+    this.hit.reset();
+    this.rest = null; // where the knee sits when not kicking
+    this.up = 0; // frames in a row the knee has been lifted
+    this.liftedT = -1;
+  }
+  // y: knee height in shoulder-widths (down is positive), relative to the hips.
+  push(y, t) {
+    if (!Number.isFinite(y)) return 0;
+    if (this.rest === null) this.rest = y;
+    // Settle quickly back down, follow a raised knee only slowly.
+    this.rest += (y - this.rest) * (y > this.rest ? 0.3 : 0.02);
+    this.up = y < this.rest - 0.15 ? this.up + 1 : 0;
+    if (this.up >= 2) this.liftedT = t;
+    const k = this.hit.push(y, t);
+    if (!k || t - this.liftedT > 0.6) return 0;
+    this.liftedT = -1;
+    return k;
+  }
+}
+
 // Drum sensitivity setting: how fast and how far a swing must go to count.
 export const SENSITIVITY = {
   low: { armSpeed: 3, minTravel: 0.25 },
@@ -94,10 +122,12 @@ export class DrumsInstrument {
     this.id = 'drums';
     const level = app.settings.drumSensitivity;
     this.hands = { L: makeHandDetector(level), R: makeHandDetector(level) };
-    this.knees = { L: new HitDetector(1.2, 0.12), R: new HitDetector(1.2, 0.12) };
+    this.knees = { L: new KickDetector(), R: new KickDetector() };
     this.flash = {};
     this.lastHit = -1;
     this.pads = null;
+    this.legSeenSince = { L: null, R: null };
+    this.footLift = { L: 0, R: 0 }; // kick animation, 1 = foot up
   }
 
   reset() {
@@ -131,6 +161,8 @@ export class DrumsInstrument {
   update(body, raw, dt, now) {
     this.pads = this.layout(body);
     for (const k of Object.keys(this.flash)) this.flash[k] = Math.max(0, this.flash[k] - dt * 4);
+    for (const side of ['L', 'R']) this.footLift[side] = Math.max(0, this.footLift[side] - dt * 6);
+    this.sit(body);
     const t = now / 1000;
     if (this.app.passive) return; // on the TV the phone decides the hits
     const active = raw.handActive || { L: true, R: true };
@@ -142,9 +174,13 @@ export class DrumsInstrument {
         const speed = this.hands[side].push(h.y / raw.S, t);
         if (speed) this.hitNearest(h, speed / 14);
       }
-      if (raw.legsSeen[side]) {
-        const k = this.knees[side].push(raw.knee[side].y / raw.S, t);
-        if (k) this.hit(this.pads[0], Math.min(1, k / 6));
+      // Kick with a knee, but only once that leg has been in view for a moment (legs at the
+      // edge of the picture flicker in and out). Measured from the hips, so bobbing doesn't count.
+      if (raw.legsSeen[side]) this.legSeenSince[side] ??= t;
+      else this.legSeenSince[side] = null;
+      if (this.legSeenSince[side] !== null && t - this.legSeenSince[side] > 0.3) {
+        const k = this.knees[side].push((raw.knee[side].y - raw.hipMid.y) / raw.S, t);
+        if (k) this.hit(this.pads[0], Math.min(1, k / 6), side);
       } else {
         this.knees[side].reset();
       }
@@ -165,7 +201,46 @@ export class DrumsInstrument {
     if (best) this.hit(best, Math.min(1, velocity));
   }
 
-  hit(pad, velocity) {
+  // Drummers sit: draw the legs in a steady seated pose on a stool instead of copying the
+  // tracker, whose guesses for half-hidden sitting legs jump about. A kick lifts a foot.
+  sit(b) {
+    const S = b.S;
+    const floorY = this.pads[0].cy + this.pads[0].rr * 1.05;
+    for (const side of ['L', 'R']) {
+      const hip = b.hip[side];
+      const out = Math.sign(hip.x - b.hipMid.x) || (side === 'L' ? -1 : 1);
+      const lift = this.footLift[side];
+      const knee = { x: hip.x + out * S * 0.28, y: hip.y + S * (0.3 - 0.2 * lift) };
+      b.knee[side] = knee;
+      b.ankle[side] = { x: knee.x + out * S * 0.06, y: Math.max(knee.y + S * 0.5, floorY - S * (0.08 + 0.3 * lift)) };
+    }
+    this.seat = { x: b.hipMid.x, y: b.hipMid.y + S * 0.12, w: Math.abs(b.hip.L.x - b.hip.R.x) / 2 + S * 0.3, floorY };
+  }
+
+  // The stool goes behind the legs.
+  drawBehind(r, scene) {
+    const st = this.seat;
+    if (!st) return;
+    const { ctx } = r;
+    const S = scene.body.S;
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = S * 0.06;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(st.x, st.y);
+    ctx.lineTo(st.x, st.floorY - S * 0.1);
+    ctx.moveTo(st.x - st.w * 0.7, st.floorY);
+    ctx.lineTo(st.x, st.floorY - S * 0.25);
+    ctx.lineTo(st.x + st.w * 0.7, st.floorY);
+    ctx.stroke();
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.ellipse(st.x, st.y, st.w, S * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  hit(pad, velocity, side) {
+    if (pad.kind === 'bass') this.footLift[side || (this.app.settings.lefty ? 'L' : 'R')] = 1;
     this.app.broadcast?.({ pad: pad.id, velocity }); // tell the TV, if casting
     drumHit(this.app.audio, pad.id, velocity);
     this.flash[pad.id] = 1;

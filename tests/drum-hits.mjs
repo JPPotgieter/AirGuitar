@@ -59,3 +59,40 @@ if ((process.env.LEVEL || 'normal') === 'normal') {
   if (!ok) process.exit(1);
   console.log('OK: normal hits are reliably detected at 15-30 fps.');
 }
+
+// Kick drum: a child sitting still (jumpy knee tracking with one-frame glitches) must not kick,
+// while real lift-and-stomp kicks still count.
+{
+  const { KickDetector } = mod;
+  let falseKicks = 0, caught = 0, total = 0;
+  for (const fps of [15, 30]) for (let s = 1; s <= 5; s++) {
+    const rand = rng(s * 31);
+    const g = () => (rand() + rand() + rand() - 1.5) * 1.15;
+    let d = new KickDetector();
+    for (let t = 0; t < 60; t += 1 / fps) {
+      const glitch = rand() < 0.03 ? (rand() - 0.5) * 0.4 : 0;
+      if (d.push(0.4 + g() * 0.07 + glitch, t)) falseKicks++;
+    }
+    d = new KickDetector();
+    const hits = []; let t0 = 0.5; const segs = [];
+    for (let i = 0; i < 30; i++) {
+      const lift = 0.25 + rand() * 0.15, up = 0.2, down = 0.08 + rand() * 0.07;
+      segs.push({ t0, lift, up, down }); hits.push(t0 + up + down); t0 += up + down + 0.4 + rand() * 0.4;
+    }
+    const y = (t) => {
+      for (const sg of segs) {
+        const a = t - sg.t0; if (a < 0) break;
+        if (a < sg.up) return -sg.lift * Math.sin((a / sg.up) * Math.PI / 2);
+        if (a < sg.up + sg.down) { const f = (a - sg.up) / sg.down; return -sg.lift * (1 - f * f); }
+      }
+      return 0;
+    };
+    const found = [];
+    for (let t = 0; t < t0 + 0.5; t += 1 / fps) if (d.push(0.4 + y(t) + g() * 0.03, t)) found.push(t);
+    total += hits.length;
+    caught += hits.filter((h) => found.some((f) => f >= h - 0.03 && f <= h + 0.15)).length;
+  }
+  console.log(`kick: sitting still for 10 min gave ${falseKicks} false kicks; real kicks caught ${Math.round((100 * caught) / total)}%`);
+  if (falseKicks > 10 || caught / total < 0.9) { console.error('FAIL: kick drum'); process.exit(1); }
+  console.log('OK: sitting still does not kick, real kicks do.');
+}

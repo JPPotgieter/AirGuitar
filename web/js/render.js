@@ -141,6 +141,8 @@ export class Renderer {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
+    scene.instrument?.drawBehind?.(this, scene);
+
     // Legs
     for (const side of ['L', 'R']) {
       limb(ctx, [b.hip[side], b.knee[side], b.ankle[side]], S * 0.3, look.pants);

@@ -89,6 +89,7 @@ const HOW = {
   drums: [
     '<b>Hit downwards</b> with either hand. Where your hand stops picks the drum or cymbal.',
     '<b>Lift and stomp a knee</b> for the kick drum (or hit low in the middle).',
+    'Sit or stand, whichever is comfier. Sitting on a chair works great for little drummers.',
   ],
   trombone: [
     'Hold the trombone to your mouth and <b>push or pull the slide</b> with your other hand.',
